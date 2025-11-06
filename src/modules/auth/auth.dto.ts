@@ -22,10 +22,4 @@ export class LoginLocalBody {
 
   @IsString({})
   password: string
-
-  @IsString()
-  name: string
-
-  @IsEnum(UserRole)
-  role: UserRole
 }

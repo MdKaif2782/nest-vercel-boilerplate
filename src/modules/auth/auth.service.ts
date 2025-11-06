@@ -52,7 +52,7 @@ export class AuthService {
     return { accessToken, refreshToken, role: user.role };
   }
 
-  async logInLocal(user: Pick<User, "email" | "password" | "name" | "role">) {
+  async logInLocal(user: Pick<User, "email" | "password">) {
     const foundUser = await this.databaseService.user.findUnique({
       where: {
         email: user.email
@@ -81,7 +81,7 @@ export class AuthService {
       refreshToken
     });
 
-    return { id: foundUser.id, accessToken, refreshToken, role: user.role };
+    return { id: foundUser.id, accessToken, refreshToken, role:foundUser.role };
   }
 
   async logOut(user: Pick<User, "id">) {
