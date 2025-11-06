@@ -1,34 +1,307 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { PoService } from './po.service';
-import { CreatePoDto } from './dto/create-po.dto';
-import { UpdatePoDto } from './dto/update-po.dto';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  HttpStatus,
+  HttpCode,
+  UsePipes,
+  ValidationPipe,
+  ParseUUIDPipe,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import { PurchaseOrderService } from './po.service';
+import {
+  CreatePurchaseOrderDto,
+  UpdatePurchaseOrderDto,
+  MarkAsReceivedDto,
+  PurchaseOrderQueryDto,
+} from './dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { AccessTokenGuard } from '../auth/auth.guard';
+import { Request } from 'express';
 
-@Controller('po')
-export class PoController {
-  constructor(private readonly poService: PoService) {}
+@ApiTags('purchase-orders')
+@ApiBearerAuth()
+@Controller('purchase-orders')
+export class PurchaseOrderController {
+  constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
 
   @Post()
-  create(@Body() createPoDto: CreatePoDto) {
-    return this.poService.create(createPoDto);
+  @ApiOperation({ summary: 'Create a new purchase order' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Purchase order created successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid investment percentage or amount',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @UseGuards(AccessTokenGuard)
+  async create(
+    @Req() req: Request,
+    @Body() createPurchaseOrderDto: CreatePurchaseOrderDto) {
+    const result = await this.purchaseOrderService.createPurchaseOrder(
+      createPurchaseOrderDto,
+    );
+    const request = req as any as {user:{id:string}}
+    const id = request.user.id;
+    console.log(id);
+    
+    return{
+      statusCode: HttpStatus.CREATED,
+      message: 'Purchase order created successfully',
+      data: result,
+    };
   }
 
   @Get()
-  findAll() {
-    return this.poService.findAll();
+  @ApiOperation({ summary: 'Get all purchase orders with pagination' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (starts from 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of items per page',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase orders retrieved successfully',
+  })
+  async findAll(@Query() query: PurchaseOrderQueryDto) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const result = await this.purchaseOrderService.findAll(skip, limit);
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase orders retrieved successfully',
+      data: result.data,
+      meta: {
+        page,
+        limit,
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit),
+      },
+    };
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.poService.findOne(+id);
+  @ApiOperation({ summary: 'Get a purchase order by ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase order retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const result = await this.purchaseOrderService.findOne(id);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase order retrieved successfully',
+      data: result,
+    };
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePoDto: UpdatePoDto) {
-    return this.poService.update(+id, updatePoDto);
+  @ApiOperation({ summary: 'Update a purchase order' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase order updated successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot modify received purchase order',
+  })
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updatePurchaseOrderDto: UpdatePurchaseOrderDto,
+  ) {
+    const result = await this.purchaseOrderService.updatePurchaseOrder(
+      id,
+      updatePurchaseOrderDto,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase order updated successfully',
+      data: result,
+    };
+  }
+
+  @Post(':id/receive')
+  @ApiOperation({
+    summary: 'Mark purchase order as received and update inventory',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase order marked as received and inventory updated',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Purchase order is already received or invalid items',
+  })
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async markAsReceived(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() markAsReceivedDto: MarkAsReceivedDto,
+  ) {
+    const result = await this.purchaseOrderService.markAsReceived(
+      id,
+      markAsReceivedDto,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase order marked as received and inventory updated',
+      data: result,
+    };
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.poService.remove(+id);
+  @ApiOperation({ summary: 'Delete a purchase order' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase order deleted successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot delete purchase order with associated inventory',
+  })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    await this.purchaseOrderService.delete(id);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase order deleted successfully',
+    };
+  }
+
+  // Additional endpoints for status updates
+
+  @Patch(':id/status/:status')
+  @ApiOperation({ summary: 'Update purchase order status' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase order status updated successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  async updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('status') status: string,
+  ) {
+    // Validate status against POStatus enum
+    const validStatuses = ['PENDING', 'ORDERED', 'SHIPPED', 'RECEIVED', 'CANCELLED'];
+    if (!validStatuses.includes(status.toUpperCase())) {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'Invalid status',
+      };
+    }
+
+    const result = await this.purchaseOrderService.updatePurchaseOrder(id, {
+      status: status as any,
+    });
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase order status updated successfully',
+      data: result,
+    };
+  }
+
+  // Get purchase orders by status
+  @Get('status/:status')
+  @ApiOperation({ summary: 'Get purchase orders by status' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (starts from 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of items per page',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Purchase orders retrieved successfully',
+  })
+  async findByStatus(
+    @Param('status') status: string,
+    @Query() query: PurchaseOrderQueryDto,
+  ) {
+    const validStatuses = ['PENDING', 'ORDERED', 'SHIPPED', 'RECEIVED', 'CANCELLED'];
+    if (!validStatuses.includes(status.toUpperCase())) {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'Invalid status',
+      };
+    }
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    // You might want to add a method in service to filter by status
+    // For now, we'll use the existing findAll and filter manually
+    const allPOs = await this.purchaseOrderService.findAll(skip, limit);
+    const filteredData = allPOs.data.filter(po => 
+      po.status === status.toUpperCase()
+    );
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Purchase orders retrieved successfully',
+      data: filteredData,
+      meta: {
+        page,
+        limit,
+        total: filteredData.length,
+        totalPages: Math.ceil(filteredData.length / limit),
+      },
+    };
   }
 }
