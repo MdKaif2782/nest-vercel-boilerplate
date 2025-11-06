@@ -34,7 +34,9 @@ let AuthService = class AuthService {
         const newUser = await this.databaseService.user.create({
             data: {
                 email: user.email,
-                password: user.password
+                password: user.password,
+                name: user.name,
+                role: user.role
             }
         });
         const { accessToken, refreshToken } = await this.generateTokens({
@@ -44,7 +46,7 @@ let AuthService = class AuthService {
             id: newUser.id,
             refreshToken
         });
-        return { accessToken, refreshToken };
+        return { accessToken, refreshToken, role: user.role };
     }
     async logInLocal(user) {
         const foundUser = await this.databaseService.user.findUnique({
@@ -66,7 +68,7 @@ let AuthService = class AuthService {
             id: foundUser.id,
             refreshToken
         });
-        return { id: foundUser.id, accessToken, refreshToken };
+        return { id: foundUser.id, accessToken, refreshToken, role: user.role };
     }
     async logOut(user) {
         const foundUser = await this.databaseService.user.findUnique({

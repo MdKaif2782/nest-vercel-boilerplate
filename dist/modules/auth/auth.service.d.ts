@@ -8,14 +8,16 @@ export declare class AuthService {
     private databaseService;
     private jwtService;
     constructor(configService: ConfigService, databaseService: DatabaseService, jwtService: JwtService);
-    registerLocal(user: Pick<User, "email" | "password">): Promise<{
+    registerLocal(user: Pick<User, "email" | "password" | "name" | "role">): Promise<{
         accessToken: string;
         refreshToken: string;
+        role: import(".prisma/client").$Enums.UserRole;
     }>;
-    logInLocal(user: Pick<User, "email" | "password">): Promise<{
+    logInLocal(user: Pick<User, "email" | "password" | "name" | "role">): Promise<{
         id: string;
         accessToken: string;
         refreshToken: string;
+        role: import(".prisma/client").$Enums.UserRole;
     }>;
     logOut(user: Pick<User, "id">): Promise<void>;
     refreshToken(user: Pick<User, "id" | "refreshToken">): Promise<{

@@ -1,81 +1,459 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgres"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  password     String
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole
+  accessToken String?
   refreshToken String?
-  registeredAt DateTime? @default(now())
-}
-
-model Metadata {
-  id        String   @id @default(uuid())
-  
-  //config
-  deliveryCharge Float
-  deliveryChargeOutsideDhaka Float  @default(120)
-  bannerUrl     String
-  bannerImage    String[] @default(["https://i.ibb.co/Wv3LTYzC/06611afe32a5.jpg"])
-  title         String
-  description   String
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relations
+  employees    Employee?
+  createdPOS   PurchaseOrder[]
+  createdBills Bill[]
+
+  expenses Expense[]
 }
 
-model Product {
-  id          String   @id @default(uuid()) 
+enum UserRole {
+  ADMIN
+  MANAGER
+  STAFF
+}
 
-  //input
-  name        String
-  description String
-  categoryId String?
-  imageUrl   String[]
-  details    String[]
-  sizeDescription String[]
-
-  price       Float
-  discountPrice Float?
-
-  //automated
+// Module 1: Purchase Order (Self)
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique
+  vendorName  String
+  vendorCountry String
+  vendorAddress String
+  vendorContact String
+  paymentType PaymentType
+  status      POStatus @default(PENDING)
+  totalAmount Float
+  taxAmount   Float
+  dueAmount   Float
+  notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  continued   Boolean  @default(true)
+  receivedAt  DateTime?
   
+  // Relations
+  createdBy   String
+  user        User     @relation(fields: [createdBy], references: [id])
+  items       PurchaseOrderItem[]
+  investments PurchaseOrderInvestment[]
+  inventory   Inventory[]
+  
+  @@map("purchase_orders")
 }
 
+model PurchaseOrderItem {
+  id              String  @id @default(cuid())
+  productName     String
+  description     String?
+  quantity        Int
+  unitPrice       Float
+  taxPercentage   Float
+  totalPrice      Float
+  
+  // Relations
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  
+  @@map("purchase_order_items")
+}
 
-enum DeliveryStatus {
+model PurchaseOrderInvestment {
+  id              String  @id @default(cuid())
+  investmentAmount Float
+  profitPercentage Float
+  isFullInvestment Boolean @default(false)
+  
+  // Relations
+  purchaseOrderId String
+  investorId      String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  investor        Investor      @relation(fields: [investorId], references: [id])
+  
+  @@map("purchase_order_investments")
+}
+
+enum PaymentType {
+  FULL
+  DUE
+}
+
+enum POStatus {
   PENDING
+  ORDERED
+  SHIPPED
+  RECEIVED
+  CANCELLED
+}
+
+// Module 2: Inventory
+model Inventory {
+  id              String   @id @default(cuid())
+  productCode     String   @unique
+  barcode         String?  @unique
+  productName     String
+  description     String?
+  quantity        Int
+  purchasePrice   Float
+  expectedSalePrice Float
+  minStockLevel   Int?
+  maxStockLevel   Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  
+  // Module relations
+  quotationItems  QuotationItem[]
+  challanItems    ChallanItem[]
+  billItems       BillItem[]
+  retailItems     RetailSaleItem[]
+  
+  @@map("inventory")
+}
+
+// Module 3: Quotation
+model Quotation {
+  id                String   @id @default(cuid())
+  quotationNumber   String   @unique
+  companyName       String
+  companyAddress    String
+  companyContact    String?
+  deliveryTerms     String?
+  deliveryDays      Int?
+  status            QuotationStatus @default(PENDING)
+  totalAmount       Float
+  taxAmount         Float
+  moneyInWords      String?
+  createdAt         DateTime @default(now())
+  validUntil        DateTime?
+  
+  // Relations
+  items      QuotationItem[]
+  buyerPO    BuyerPurchaseOrder?
+  
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id            String  @id @default(cuid())
+  quantity      Int
+  mrp           Float
+  unitPrice     Float
+  packagePrice  Float
+  taxPercentage Float?
+  totalPrice    Float
+  
+  // Relations
+  quotationId   String
+  inventoryId   String
+  quotation     Quotation @relation(fields: [quotationId], references: [id])
+  inventory     Inventory @relation(fields: [inventoryId], references: [id])
+  
+  @@map("quotation_items")
+}
+
+enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// Module 4: Purchase Order (from Buyer)
+model BuyerPurchaseOrder {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique
+  poDate      DateTime
+  pdfUrl      String?
+  externalUrl String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  quotationId String   @unique
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  bills       Bill[]
+  
+  @@map("buyer_purchase_orders")
+  challans Challan[]
+}
+
+// Module 5: Challan
+model Challan {
+  id          String   @id @default(cuid())
+  challanNumber String @unique
+  status      ChallanStatus @default(DRAFT)
+  dispatchDate DateTime?
+  deliveryDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  buyerPurchaseOrderId String
+  buyerPurchaseOrder   BuyerPurchaseOrder @relation(fields: [buyerPurchaseOrderId], references: [id])
+  items       ChallanItem[]
+  
+  @@map("challans")
+}
+
+model ChallanItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  
+  // Relations
+  challanId   String
+  inventoryId String
+  challan     Challan   @relation(fields: [challanId], references: [id])
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  
+  @@map("challan_items")
+}
+
+enum ChallanStatus {
+  DRAFT
   DISPATCHED
   DELIVERED
-  CANCELLED
+  RETURNED
+  REJECTED
 }
 
-enum OrderStatus {
-  PENDING
-  CHECKED_OUT
-  CANCELLED
+// Module 6: Bill (Corporate Selling)
+model Bill {
+  id          String   @id @default(cuid())
+  billNumber  String   @unique
+  billDate    DateTime @default(now())
+  vatRegNo    String
+  code        String
+  vendorNo    String
+  totalAmount Float
+  taxAmount   Float
+  dueAmount   Float
+  status      BillStatus @default(PENDING)
+  
+  // Relations
+  buyerPOId   String
+  createdBy   String
+  buyerPO     BuyerPurchaseOrder @relation(fields: [buyerPOId], references: [id])
+  user        User               @relation(fields: [createdBy], references: [id])
+  items       BillItem[]
+  payments    Payment[]
+  
+  @@map("bills")
+  profitDistributions ProfitDistribution[]
 }
 
-enum PaymentStatus {
+model BillItem {
+  id            String  @id @default(cuid())
+  productDescription String
+  packagingDescription String?
+  quantity      Int
+  unitPrice     Float
+  totalPrice    Float
+  
+  // Relations
+  billId      String
+  inventoryId String
+  bill        Bill      @relation(fields: [billId], references: [id])
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  
+  @@map("bill_items")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  amount      Float
+  paymentDate DateTime @default(now())
+  paymentMethod PaymentMethod
+  reference   String?
+  
+  // Relations
+  billId      String
+  bill        Bill @relation(fields: [billId], references: [id])
+  
+  @@map("payments")
+}
+
+enum BillStatus {
   PENDING
+  PARTIALLY_PAID
   PAID
-  REFUNDED
-  CANCELLED
+  OVERDUE
 }
 
 enum PaymentMethod {
-  CASH_ON_DELIVERY
-  CREDIT_CARD
-  DEBIT_CARD
-  MOBILE_BANKING
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  CARD
+}
+
+// Module 7: Retail Selling
+model RetailSale {
+  id          String   @id @default(cuid())
+  saleNumber  String   @unique
+  saleDate    DateTime @default(now())
+  totalAmount Float
+  paymentMethod PaymentMethod
+  reference   String?
+  
+  // Relations
+  items RetailSaleItem[]
+  
+  @@map("retail_sales")
+}
+
+model RetailSaleItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  unitPrice Float
+  totalPrice Float
+  
+  // Relations
+  retailSaleId String
+  inventoryId  String
+  retailSale   RetailSale @relation(fields: [retailSaleId], references: [id])
+  inventory    Inventory  @relation(fields: [inventoryId], references: [id])
+  
+  @@map("retail_sale_items")
+}
+
+// Module 8: Expense
+model Expense {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  amount      Float
+  category    ExpenseCategory
+  expenseDate DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  
+  // Relations
+  recordedBy  String
+  user        User @relation(fields: [recordedBy], references: [id])
+  
+  @@map("expenses")
+}
+
+enum ExpenseCategory {
+  ELECTRICITY
+  RENT
+  TRAVEL
+  OFFICE_SUPPLIES
+  MAINTENANCE
+  INTERNET
   OTHER
+}
+
+// Module 9: Employee & Salary Management
+model Employee {
+  id              String   @id @default(cuid())
+  employeeId      String   @unique
+  name            String
+  email           String   @unique
+  phone           String?
+  address         String?
+  designation     String
+  joinDate        DateTime
+  baseSalary      Float
+  homeRentAllowance Float
+  healthAllowance Float
+  travelAllowance Float
+  mobileAllowance Float
+  otherAllowances Float
+  overtimeRate    Float?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  userId     String? @unique
+  user       User?   @relation(fields: [userId], references: [id])
+  salaries   Salary[]
+  
+  @@map("employees")
+}
+
+model Salary {
+  id            String   @id @default(cuid())
+  month         Int
+  year          Int
+  baseSalary    Float
+  allowances    Float
+  overtimeHours Float?
+  overtimeAmount Float?
+  bonus         Float?
+  deductions    Float?
+  netSalary     Float
+  status        SalaryStatus @default(PENDING)
+  paidDate      DateTime?
+  
+  // Relations
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  
+  @@unique([employeeId, month, year])
+  @@map("salaries")
+}
+
+enum SalaryStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+// Module 11: Investor Module
+model Investor {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  taxId       String?
+  bankAccount String?
+  bankName    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  investments PurchaseOrderInvestment[]
+  profitDistributions ProfitDistribution[]
+  
+  @@map("investors")
+}
+
+model ProfitDistribution {
+  id          String   @id @default(cuid())
+  amount      Float
+  distributionDate DateTime @default(now())
+  description String?
+  
+  // Relations
+  investorId  String
+  billId      String
+  investor    Investor @relation(fields: [investorId], references: [id])
+  bill        Bill     @relation(fields: [billId], references: [id])
+  
+  @@map("profit_distributions")
 }

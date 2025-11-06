@@ -7,11 +7,13 @@ export declare class AuthController {
     registerLocal(body: RegisterLocalBody): Promise<{
         accessToken: string;
         refreshToken: string;
+        role: import(".prisma/client").$Enums.UserRole;
     }>;
     logInLocal(body: LoginLocalBody): Promise<{
         id: string;
         accessToken: string;
         refreshToken: string;
+        role: import(".prisma/client").$Enums.UserRole;
     }>;
     logOut(req: Request): Promise<void>;
     refreshToken(req: Request): Promise<{

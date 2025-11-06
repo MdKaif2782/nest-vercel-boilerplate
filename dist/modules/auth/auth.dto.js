@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoginLocalBody = exports.RegisterLocalBody = void 0;
 const class_validator_1 = require("class-validator");
+const client_1 = require("@prisma/client");
 class RegisterLocalBody {
 }
 exports.RegisterLocalBody = RegisterLocalBody;
@@ -22,6 +23,14 @@ __decorate([
     (0, class_validator_1.IsString)({}),
     __metadata("design:type", String)
 ], RegisterLocalBody.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RegisterLocalBody.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.UserRole),
+    __metadata("design:type", String)
+], RegisterLocalBody.prototype, "role", void 0);
 class LoginLocalBody {
 }
 exports.LoginLocalBody = LoginLocalBody;
@@ -33,4 +42,12 @@ __decorate([
     (0, class_validator_1.IsString)({}),
     __metadata("design:type", String)
 ], LoginLocalBody.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LoginLocalBody.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.UserRole),
+    __metadata("design:type", String)
+], LoginLocalBody.prototype, "role", void 0);
 //# sourceMappingURL=auth.dto.js.map

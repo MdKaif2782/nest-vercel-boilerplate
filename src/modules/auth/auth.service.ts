@@ -18,7 +18,7 @@ export class AuthService {
     private jwtService: JwtService
   ) {}
 
-  async registerLocal(user: Pick<User, "email" | "password">) {
+  async registerLocal(user: Pick<User, "email" | "password" | "name" | "role">) {
     user.password = await this.createHash(user.password);
 
     const foundUser = await this.databaseService.user.findUnique({
@@ -34,7 +34,9 @@ export class AuthService {
     const newUser = await this.databaseService.user.create({
       data: {
         email: user.email,
-        password: user.password
+        password: user.password,
+        name: user.name,
+        role: user.role
       }
     });
 
@@ -47,10 +49,10 @@ export class AuthService {
       refreshToken
     });
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, role: user.role };
   }
 
-  async logInLocal(user: Pick<User, "email" | "password">) {
+  async logInLocal(user: Pick<User, "email" | "password" | "name" | "role">) {
     const foundUser = await this.databaseService.user.findUnique({
       where: {
         email: user.email
@@ -79,7 +81,7 @@ export class AuthService {
       refreshToken
     });
 
-    return { id: foundUser.id, accessToken, refreshToken };
+    return { id: foundUser.id, accessToken, refreshToken, role: user.role };
   }
 
   async logOut(user: Pick<User, "id">) {

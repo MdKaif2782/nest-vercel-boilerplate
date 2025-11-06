@@ -1,4 +1,6 @@
-import { IsEmail, IsString } from "class-validator"
+import { IsEmail, IsEnum, IsString } from "class-validator"
+import { Role } from "./auth.role"
+import { UserRole } from "@prisma/client"
 
 export class RegisterLocalBody {
   @IsEmail()
@@ -6,6 +8,12 @@ export class RegisterLocalBody {
 
   @IsString({})
   password: string
+
+  @IsString()
+  name: string
+
+  @IsEnum(UserRole)
+  role: UserRole
 }
 
 export class LoginLocalBody {
@@ -14,4 +22,10 @@ export class LoginLocalBody {
 
   @IsString({})
   password: string
+
+  @IsString()
+  name: string
+
+  @IsEnum(UserRole)
+  role: UserRole
 }
