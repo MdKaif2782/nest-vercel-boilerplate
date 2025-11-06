@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { Auth } from 'firebase-admin/lib/auth/auth';
 import { AuthModule } from '../auth/auth.module';
+import { InvestorModule } from '../investor/investor.module';
+import { PoModule } from '../po/po.module';
 
 @Module({
   imports: [
@@ -11,7 +13,9 @@ import { AuthModule } from '../auth/auth.module';
       isGlobal: true,
       cache: true,
     }),
-    AuthModule
+    AuthModule,
+    InvestorModule,
+    PoModule
     //FirebaseModule,
   ],
   controllers: [AppController],

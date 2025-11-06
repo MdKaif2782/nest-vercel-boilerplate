@@ -68,7 +68,7 @@ let AuthService = class AuthService {
             id: foundUser.id,
             refreshToken
         });
-        return { id: foundUser.id, accessToken, refreshToken, role: user.role };
+        return { id: foundUser.id, accessToken, refreshToken, role: foundUser.role };
     }
     async logOut(user) {
         const foundUser = await this.databaseService.user.findUnique({

@@ -13,7 +13,7 @@ export declare class AuthService {
         refreshToken: string;
         role: import(".prisma/client").$Enums.UserRole;
     }>;
-    logInLocal(user: Pick<User, "email" | "password" | "name" | "role">): Promise<{
+    logInLocal(user: Pick<User, "email" | "password">): Promise<{
         id: string;
         accessToken: string;
         refreshToken: string;

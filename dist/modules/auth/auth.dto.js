@@ -42,12 +42,4 @@ __decorate([
     (0, class_validator_1.IsString)({}),
     __metadata("design:type", String)
 ], LoginLocalBody.prototype, "password", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], LoginLocalBody.prototype, "name", void 0);
-__decorate([
-    (0, class_validator_1.IsEnum)(client_1.UserRole),
-    __metadata("design:type", String)
-], LoginLocalBody.prototype, "role", void 0);
 //# sourceMappingURL=auth.dto.js.map

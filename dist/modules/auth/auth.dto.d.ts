@@ -8,6 +8,4 @@ export declare class RegisterLocalBody {
 export declare class LoginLocalBody {
     email: string;
     password: string;
-    name: string;
-    role: UserRole;
 }

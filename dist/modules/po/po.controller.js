@@ -12,69 +12,296 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PoController = void 0;
+exports.PurchaseOrderController = void 0;
 const common_1 = require("@nestjs/common");
 const po_service_1 = require("./po.service");
-const create_po_dto_1 = require("./dto/create-po.dto");
-const update_po_dto_1 = require("./dto/update-po.dto");
-let PoController = class PoController {
-    constructor(poService) {
-        this.poService = poService;
+const dto_1 = require("./dto");
+const swagger_1 = require("@nestjs/swagger");
+const auth_guard_1 = require("../auth/auth.guard");
+let PurchaseOrderController = class PurchaseOrderController {
+    constructor(purchaseOrderService) {
+        this.purchaseOrderService = purchaseOrderService;
     }
-    create(createPoDto) {
-        return this.poService.create(createPoDto);
+    async create(req, createPurchaseOrderDto) {
+        const result = await this.purchaseOrderService.createPurchaseOrder(createPurchaseOrderDto);
+        const request = req;
+        const id = request.user.id;
+        console.log(id);
+        return {
+            statusCode: common_1.HttpStatus.CREATED,
+            message: 'Purchase order created successfully',
+            data: result,
+        };
     }
-    findAll() {
-        return this.poService.findAll();
+    async findAll(query) {
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const skip = (page - 1) * limit;
+        const result = await this.purchaseOrderService.findAll(skip, limit);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase orders retrieved successfully',
+            data: result.data,
+            meta: {
+                page,
+                limit,
+                total: result.total,
+                totalPages: Math.ceil(result.total / limit),
+            },
+        };
     }
-    findOne(id) {
-        return this.poService.findOne(+id);
+    async findOne(id) {
+        const result = await this.purchaseOrderService.findOne(id);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase order retrieved successfully',
+            data: result,
+        };
     }
-    update(id, updatePoDto) {
-        return this.poService.update(+id, updatePoDto);
+    async update(id, updatePurchaseOrderDto) {
+        const result = await this.purchaseOrderService.updatePurchaseOrder(id, updatePurchaseOrderDto);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase order updated successfully',
+            data: result,
+        };
     }
-    remove(id) {
-        return this.poService.remove(+id);
+    async markAsReceived(id, markAsReceivedDto) {
+        const result = await this.purchaseOrderService.markAsReceived(id, markAsReceivedDto);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase order marked as received and inventory updated',
+            data: result,
+        };
+    }
+    async remove(id) {
+        await this.purchaseOrderService.delete(id);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase order deleted successfully',
+        };
+    }
+    async updateStatus(id, status) {
+        const validStatuses = ['PENDING', 'ORDERED', 'SHIPPED', 'RECEIVED', 'CANCELLED'];
+        if (!validStatuses.includes(status.toUpperCase())) {
+            return {
+                statusCode: common_1.HttpStatus.BAD_REQUEST,
+                message: 'Invalid status',
+            };
+        }
+        const result = await this.purchaseOrderService.updatePurchaseOrder(id, {
+            status: status,
+        });
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase order status updated successfully',
+            data: result,
+        };
+    }
+    async findByStatus(status, query) {
+        const validStatuses = ['PENDING', 'ORDERED', 'SHIPPED', 'RECEIVED', 'CANCELLED'];
+        if (!validStatuses.includes(status.toUpperCase())) {
+            return {
+                statusCode: common_1.HttpStatus.BAD_REQUEST,
+                message: 'Invalid status',
+            };
+        }
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const skip = (page - 1) * limit;
+        const allPOs = await this.purchaseOrderService.findAll(skip, limit);
+        const filteredData = allPOs.data.filter(po => po.status === status.toUpperCase());
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Purchase orders retrieved successfully',
+            data: filteredData,
+            meta: {
+                page,
+                limit,
+                total: filteredData.length,
+                totalPages: Math.ceil(filteredData.length / limit),
+            },
+        };
     }
 };
-exports.PoController = PoController;
+exports.PurchaseOrderController = PurchaseOrderController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_po_dto_1.CreatePoDto]),
-    __metadata("design:returntype", void 0)
-], PoController.prototype, "create", null);
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], PoController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], PoController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a new purchase order' }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.CREATED,
+        description: 'Purchase order created successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.BAD_REQUEST,
+        description: 'Invalid investment percentage or amount',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.UNAUTHORIZED,
+        description: 'Unauthorized',
+    }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true })),
+    (0, common_1.UseGuards)(auth_guard_1.AccessTokenGuard),
+    __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_po_dto_1.UpdatePoDto]),
-    __metadata("design:returntype", void 0)
-], PoController.prototype, "update", null);
+    __metadata("design:paramtypes", [Object, dto_1.CreatePurchaseOrderDto]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "create", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all purchase orders with pagination' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Page number (starts from 1)',
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Number of items per page',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase orders retrieved successfully',
+    }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.PurchaseOrderQueryDto]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a purchase order by ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase order retrieved successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.NOT_FOUND,
+        description: 'Purchase order not found',
+    }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], PoController.prototype, "remove", null);
-exports.PoController = PoController = __decorate([
-    (0, common_1.Controller)('po'),
-    __metadata("design:paramtypes", [po_service_1.PoService])
-], PoController);
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a purchase order' }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase order updated successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.NOT_FOUND,
+        description: 'Purchase order not found',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.BAD_REQUEST,
+        description: 'Cannot modify received purchase order',
+    }),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true, whitelist: true })),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.UpdatePurchaseOrderDto]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)(':id/receive'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Mark purchase order as received and update inventory',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase order marked as received and inventory updated',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.NOT_FOUND,
+        description: 'Purchase order not found',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.BAD_REQUEST,
+        description: 'Purchase order is already received or invalid items',
+    }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ transform: true })),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.MarkAsReceivedDto]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "markAsReceived", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a purchase order' }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase order deleted successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.NOT_FOUND,
+        description: 'Purchase order not found',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.BAD_REQUEST,
+        description: 'Cannot delete purchase order with associated inventory',
+    }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)(':id/status/:status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update purchase order status' }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase order status updated successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.NOT_FOUND,
+        description: 'Purchase order not found',
+    }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __param(1, (0, common_1.Param)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Get)('status/:status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get purchase orders by status' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Page number (starts from 1)',
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Number of items per page',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Purchase orders retrieved successfully',
+    }),
+    __param(0, (0, common_1.Param)('status')),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.PurchaseOrderQueryDto]),
+    __metadata("design:returntype", Promise)
+], PurchaseOrderController.prototype, "findByStatus", null);
+exports.PurchaseOrderController = PurchaseOrderController = __decorate([
+    (0, swagger_1.ApiTags)('purchase-orders'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('purchase-orders'),
+    __metadata("design:paramtypes", [po_service_1.PurchaseOrderService])
+], PurchaseOrderController);
 //# sourceMappingURL=po.controller.js.map
