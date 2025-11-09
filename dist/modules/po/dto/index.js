@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PurchaseOrderQueryDto = exports.MarkAsReceivedDto = exports.ReceivedItemDto = exports.UpdatePurchaseOrderDto = exports.CreatePurchaseOrderDto = exports.PurchaseOrderInvestmentDto = exports.PurchaseOrderItemDto = void 0;
+exports.PaymentSummaryDto = exports.PurchaseOrderPaymentResponseDto = exports.CreatePurchaseOrderPaymentDto = exports.PurchaseOrderQueryDto = exports.MarkAsReceivedDto = exports.ReceivedItemDto = exports.UpdatePurchaseOrderDto = exports.CreatePurchaseOrderDto = exports.PurchaseOrderInvestmentDto = exports.PurchaseOrderItemDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const swagger_1 = require("@nestjs/swagger");
@@ -145,11 +145,6 @@ __decorate([
     (0, class_transformer_1.Type)(() => PurchaseOrderInvestmentDto),
     __metadata("design:type", Array)
 ], CreatePurchaseOrderDto.prototype, "investments", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: 'User ID who created the PO' }),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreatePurchaseOrderDto.prototype, "createdBy", void 0);
 class UpdatePurchaseOrderDto {
 }
 exports.UpdatePurchaseOrderDto = UpdatePurchaseOrderDto;
@@ -280,4 +275,94 @@ __decorate([
     (0, class_validator_1.Min)(1),
     __metadata("design:type", Number)
 ], PurchaseOrderQueryDto.prototype, "limit", void 0);
+class CreatePurchaseOrderPaymentDto {
+}
+exports.CreatePurchaseOrderPaymentDto = CreatePurchaseOrderPaymentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Payment amount', minimum: 0.01 }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0.01),
+    __metadata("design:type", Number)
+], CreatePurchaseOrderPaymentDto.prototype, "amount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ enum: client_1.PaymentMethod, description: 'Payment method' }),
+    (0, class_validator_1.IsEnum)(client_1.PaymentMethod),
+    __metadata("design:type", String)
+], CreatePurchaseOrderPaymentDto.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Payment reference number' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePurchaseOrderPaymentDto.prototype, "reference", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Payment notes' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePurchaseOrderPaymentDto.prototype, "notes", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Payment date' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreatePurchaseOrderPaymentDto.prototype, "paymentDate", void 0);
+class PurchaseOrderPaymentResponseDto {
+}
+exports.PurchaseOrderPaymentResponseDto = PurchaseOrderPaymentResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], PurchaseOrderPaymentResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], PurchaseOrderPaymentResponseDto.prototype, "amount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Date)
+], PurchaseOrderPaymentResponseDto.prototype, "paymentDate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], PurchaseOrderPaymentResponseDto.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], PurchaseOrderPaymentResponseDto.prototype, "reference", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], PurchaseOrderPaymentResponseDto.prototype, "notes", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], PurchaseOrderPaymentResponseDto.prototype, "purchaseOrderId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Date)
+], PurchaseOrderPaymentResponseDto.prototype, "createdAt", void 0);
+class PaymentSummaryDto {
+}
+exports.PaymentSummaryDto = PaymentSummaryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], PaymentSummaryDto.prototype, "totalAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], PaymentSummaryDto.prototype, "totalPaid", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], PaymentSummaryDto.prototype, "remainingDue", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], PaymentSummaryDto.prototype, "paymentCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ type: [PurchaseOrderPaymentResponseDto] }),
+    __metadata("design:type", Array)
+], PaymentSummaryDto.prototype, "payments", void 0);
 //# sourceMappingURL=index.js.map

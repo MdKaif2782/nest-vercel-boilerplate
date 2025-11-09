@@ -41,21 +41,21 @@ let PurchaseOrderService = class PurchaseOrderService {
     async validateAndProcessInvestments(investments, totalAmount) {
         const totalProfitPercentage = investments.reduce((sum, inv) => sum + inv.profitPercentage, 0);
         const totalInvestmentAmount = investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
-        if (Math.abs(totalInvestmentAmount - totalAmount) > 0.01) {
-            throw new common_1.BadRequestException('Total investment amount must match purchase order total amount');
-        }
-        if (Math.abs(totalProfitPercentage - 100) < 0.01) {
+        if (Math.abs(totalProfitPercentage - 100) < 0.01 && Math.abs(totalInvestmentAmount - totalAmount) < 0.01) {
             return { processedInvestments: investments };
         }
         if (totalProfitPercentage > 100) {
             throw new common_1.BadRequestException('Total profit percentage cannot exceed 100%');
         }
+        if (totalInvestmentAmount > totalAmount) {
+            throw new common_1.BadRequestException('Total investment amount cannot exceed purchase order total amount');
+        }
         const remainingPercentage = 100 - totalProfitPercentage;
-        const selfInvestmentAmount = totalAmount - totalInvestmentAmount;
+        const remainingAmount = totalAmount - totalInvestmentAmount;
         const selfInvestorId = await this.findOrCreateSelfInvestor();
         const selfInvestment = {
             investorId: selfInvestorId,
-            investmentAmount: selfInvestmentAmount,
+            investmentAmount: remainingAmount,
             profitPercentage: remainingPercentage,
             isFullInvestment: false
         };
@@ -64,12 +64,13 @@ let PurchaseOrderService = class PurchaseOrderService {
             selfInvestment
         };
     }
-    async createPurchaseOrder(dto) {
+    async createPurchaseOrder(dto, createdBy) {
         const { items, investments, ...poData } = dto;
         const { processedInvestments } = await this.validateAndProcessInvestments(investments, poData.totalAmount);
         return await this.database.$transaction(async (prisma) => {
             const purchaseOrder = await prisma.purchaseOrder.create({
                 data: {
+                    createdBy: createdBy,
                     ...poData,
                     poNumber: await this.generatePONumber(),
                     status: client_1.POStatus.PENDING,
@@ -285,6 +286,213 @@ let PurchaseOrderService = class PurchaseOrderService {
         return await this.database.purchaseOrder.delete({
             where: { id }
         });
+    }
+    async addPayment(purchaseOrderId, createPaymentDto) {
+        const purchaseOrder = await this.database.purchaseOrder.findUnique({
+            where: { id: purchaseOrderId },
+            include: { payments: true }
+        });
+        if (!purchaseOrder) {
+            throw new common_1.NotFoundException(`Purchase order with ID ${purchaseOrderId} not found`);
+        }
+        if (purchaseOrder.status === client_1.POStatus.CANCELLED) {
+            throw new common_1.BadRequestException('Cannot add payment to cancelled purchase order');
+        }
+        const { amount, paymentMethod, reference, notes, paymentDate } = createPaymentDto;
+        if (amount > purchaseOrder.dueAmount) {
+            throw new common_1.BadRequestException(`Payment amount (${amount}) exceeds due amount (${purchaseOrder.dueAmount})`);
+        }
+        if (amount <= 0) {
+            throw new common_1.BadRequestException('Payment amount must be greater than 0');
+        }
+        return await this.database.$transaction(async (prisma) => {
+            const payment = await prisma.purchaseOrderPayment.create({
+                data: {
+                    amount,
+                    paymentMethod,
+                    reference,
+                    notes,
+                    paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+                    purchaseOrderId,
+                },
+            });
+            const updatedPO = await prisma.purchaseOrder.update({
+                where: { id: purchaseOrderId },
+                data: {
+                    dueAmount: {
+                        decrement: amount,
+                    },
+                },
+                include: {
+                    payments: {
+                        orderBy: { paymentDate: 'desc' }
+                    },
+                    items: true,
+                    investments: {
+                        include: {
+                            investor: true
+                        }
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true
+                        }
+                    }
+                }
+            });
+            return { payment, updatedPO };
+        });
+    }
+    async getPaymentSummary(purchaseOrderId) {
+        const purchaseOrder = await this.database.purchaseOrder.findUnique({
+            where: { id: purchaseOrderId },
+            include: {
+                payments: {
+                    orderBy: { paymentDate: 'asc' }
+                }
+            }
+        });
+        if (!purchaseOrder) {
+            throw new common_1.NotFoundException(`Purchase order with ID ${purchaseOrderId} not found`);
+        }
+        const totalPaid = purchaseOrder.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const remainingDue = purchaseOrder.totalAmount - totalPaid;
+        return {
+            totalAmount: purchaseOrder.totalAmount,
+            totalPaid,
+            remainingDue,
+            paymentCount: purchaseOrder.payments.length,
+            payments: purchaseOrder.payments.map(payment => ({
+                id: payment.id,
+                amount: payment.amount,
+                paymentDate: payment.paymentDate,
+                paymentMethod: payment.paymentMethod,
+                reference: payment.reference,
+                notes: payment.notes,
+                purchaseOrderId: payment.purchaseOrderId,
+                createdAt: payment.paymentDate
+            }))
+        };
+    }
+    async getPayments(purchaseOrderId) {
+        const payments = await this.database.purchaseOrderPayment.findMany({
+            where: { purchaseOrderId },
+            orderBy: { paymentDate: 'desc' },
+            include: {
+                purchaseOrder: {
+                    select: {
+                        poNumber: true,
+                        vendorName: true,
+                        totalAmount: true,
+                    }
+                }
+            }
+        });
+        return payments;
+    }
+    async updatePayment(paymentId, updateData) {
+        const payment = await this.database.purchaseOrderPayment.findUnique({
+            where: { id: paymentId },
+            include: { purchaseOrder: true }
+        });
+        if (!payment) {
+            throw new common_1.NotFoundException(`Payment with ID ${paymentId} not found`);
+        }
+        if (updateData.amount !== undefined) {
+            const amountDifference = updateData.amount - payment.amount;
+            if (amountDifference + payment.purchaseOrder.dueAmount < 0) {
+                throw new common_1.BadRequestException('Updated payment amount would make due amount negative');
+            }
+            return await this.database.$transaction(async (prisma) => {
+                const updatedPayment = await prisma.purchaseOrderPayment.update({
+                    where: { id: paymentId },
+                    data: updateData,
+                });
+                await prisma.purchaseOrder.update({
+                    where: { id: payment.purchaseOrderId },
+                    data: {
+                        dueAmount: {
+                            increment: -amountDifference,
+                        }
+                    }
+                });
+                return updatedPayment;
+            });
+        }
+        return await this.database.purchaseOrderPayment.update({
+            where: { id: paymentId },
+            data: updateData,
+        });
+    }
+    async deletePayment(paymentId) {
+        const payment = await this.database.purchaseOrderPayment.findUnique({
+            where: { id: paymentId },
+            include: { purchaseOrder: true }
+        });
+        if (!payment) {
+            throw new common_1.NotFoundException(`Payment with ID ${paymentId} not found`);
+        }
+        return await this.database.$transaction(async (prisma) => {
+            await prisma.purchaseOrderPayment.delete({
+                where: { id: paymentId },
+            });
+            const updatedPO = await prisma.purchaseOrder.update({
+                where: { id: payment.purchaseOrderId },
+                data: {
+                    dueAmount: {
+                        increment: payment.amount,
+                    }
+                }
+            });
+            return { message: 'Payment deleted successfully', revertedAmount: payment.amount };
+        });
+    }
+    async getDuePurchaseOrders(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const [purchaseOrders, total] = await Promise.all([
+            this.database.purchaseOrder.findMany({
+                where: {
+                    dueAmount: { gt: 0 },
+                    status: { not: client_1.POStatus.CANCELLED }
+                },
+                include: {
+                    payments: {
+                        orderBy: { paymentDate: 'desc' }
+                    },
+                    user: {
+                        select: {
+                            name: true,
+                            email: true
+                        }
+                    },
+                    _count: {
+                        select: {
+                            payments: true
+                        }
+                    }
+                },
+                orderBy: { dueAmount: 'desc' },
+                skip,
+                take: limit,
+            }),
+            this.database.purchaseOrder.count({
+                where: {
+                    dueAmount: { gt: 0 },
+                    status: { not: client_1.POStatus.CANCELLED }
+                }
+            })
+        ]);
+        return {
+            data: purchaseOrders,
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            }
+        };
     }
 };
 exports.PurchaseOrderService = PurchaseOrderService;

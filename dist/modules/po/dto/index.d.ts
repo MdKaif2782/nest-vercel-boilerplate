@@ -1,4 +1,4 @@
-import { PaymentType, POStatus } from '@prisma/client';
+import { PaymentMethod, PaymentType, POStatus } from '@prisma/client';
 export declare class PurchaseOrderItemDto {
     productName: string;
     description?: string;
@@ -25,7 +25,6 @@ export declare class CreatePurchaseOrderDto {
     notes?: string;
     items: PurchaseOrderItemDto[];
     investments: PurchaseOrderInvestmentDto[];
-    createdBy: string;
 }
 export declare class UpdatePurchaseOrderDto implements Partial<CreatePurchaseOrderDto> {
     vendorName?: string;
@@ -52,4 +51,28 @@ export declare class MarkAsReceivedDto {
 export declare class PurchaseOrderQueryDto {
     page?: number;
     limit?: number;
+}
+export declare class CreatePurchaseOrderPaymentDto {
+    amount: number;
+    paymentMethod: PaymentMethod;
+    reference?: string;
+    notes?: string;
+    paymentDate?: string;
+}
+export declare class PurchaseOrderPaymentResponseDto {
+    id: string;
+    amount: number;
+    paymentDate: Date;
+    paymentMethod: PaymentMethod;
+    reference?: string;
+    notes?: string;
+    purchaseOrderId: string;
+    createdAt: Date;
+}
+export declare class PaymentSummaryDto {
+    totalAmount: number;
+    totalPaid: number;
+    remainingDue: number;
+    paymentCount: number;
+    payments: PurchaseOrderPaymentResponseDto[];
 }

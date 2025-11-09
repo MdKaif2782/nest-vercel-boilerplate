@@ -4,16 +4,16 @@ export declare class InvestorController {
     private readonly investorService;
     constructor(investorService: InvestorService);
     createInvestor(createInvestorDto: CreateInvestorDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     getAllInvestors(page: number, limit: number, search?: string): Promise<{
         investors: ({
@@ -31,16 +31,16 @@ export declare class InvestorController {
                 investorId: string;
             })[];
         } & {
-            name: string;
             id: string;
+            name: string;
             email: string;
-            createdAt: Date;
             phone: string | null;
             address: string | null;
             taxId: string | null;
             bankAccount: string | null;
             bankName: string | null;
             isActive: boolean;
+            createdAt: Date;
         })[];
         pagination: {
             page: number;
@@ -115,57 +115,57 @@ export declare class InvestorController {
         } & {
             id: string;
             investorId: string;
-            distributionDate: Date;
-            amount: number;
             description: string | null;
+            amount: number;
+            distributionDate: Date;
             billId: string;
         })[];
     } & {
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     updateInvestor(id: string, updateInvestorDto: UpdateInvestorDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     deleteInvestor(id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     toggleInvestorStatus(id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
 }

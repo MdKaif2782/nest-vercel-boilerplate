@@ -6,6 +6,7 @@ import { Auth } from 'firebase-admin/lib/auth/auth';
 import { AuthModule } from '../auth/auth.module';
 import { InvestorModule } from '../investor/investor.module';
 import { PoModule } from '../po/po.module';
+import { InventoryModule } from '../inventory/inventory.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { PoModule } from '../po/po.module';
     }),
     AuthModule,
     InvestorModule,
-    PoModule
+    PoModule,
+    InventoryModule
     //FirebaseModule,
   ],
   controllers: [AppController],

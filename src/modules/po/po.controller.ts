@@ -9,9 +9,7 @@ import {
   Query,
   HttpStatus,
   HttpCode,
-  UsePipes,
   ValidationPipe,
-  ParseUUIDPipe,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -21,6 +19,8 @@ import {
   UpdatePurchaseOrderDto,
   MarkAsReceivedDto,
   PurchaseOrderQueryDto,
+  CreatePurchaseOrderPaymentDto,
+  PaymentSummaryDto,
 } from './dto';
 import {
   ApiTags,
@@ -53,18 +53,16 @@ export class PurchaseOrderController {
     description: 'Unauthorized',
   })
   @HttpCode(HttpStatus.CREATED)
-  @UsePipes(new ValidationPipe({ transform: true }))
   @UseGuards(AccessTokenGuard)
   async create(
     @Req() req: Request,
     @Body() createPurchaseOrderDto: CreatePurchaseOrderDto) {
-    const result = await this.purchaseOrderService.createPurchaseOrder(
-      createPurchaseOrderDto,
-    );
     const request = req as any as {user:{id:string}}
     const id = request.user.id;
     console.log(id);
-    
+    const result = await this.purchaseOrderService.createPurchaseOrder(
+      createPurchaseOrderDto, id
+    );
     return{
       statusCode: HttpStatus.CREATED,
       message: 'Purchase order created successfully',
@@ -120,7 +118,7 @@ export class PurchaseOrderController {
     status: HttpStatus.NOT_FOUND,
     description: 'Purchase order not found',
   })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id') id: string) {
     const result = await this.purchaseOrderService.findOne(id);
     return {
       statusCode: HttpStatus.OK,
@@ -143,9 +141,8 @@ export class PurchaseOrderController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Cannot modify received purchase order',
   })
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updatePurchaseOrderDto: UpdatePurchaseOrderDto,
   ) {
     const result = await this.purchaseOrderService.updatePurchaseOrder(
@@ -176,11 +173,11 @@ export class PurchaseOrderController {
     description: 'Purchase order is already received or invalid items',
   })
   @HttpCode(HttpStatus.OK)
-  @UsePipes(new ValidationPipe({ transform: true }))
   async markAsReceived(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() markAsReceivedDto: MarkAsReceivedDto,
   ) {
+    console.log(id);
     const result = await this.purchaseOrderService.markAsReceived(
       id,
       markAsReceivedDto,
@@ -206,7 +203,7 @@ export class PurchaseOrderController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Cannot delete purchase order with associated inventory',
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
+  async remove(@Param('id') id: string) {
     await this.purchaseOrderService.delete(id);
     return {
       statusCode: HttpStatus.OK,
@@ -227,7 +224,7 @@ export class PurchaseOrderController {
     description: 'Purchase order not found',
   })
   async updateStatus(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Param('status') status: string,
   ) {
     // Validate status against POStatus enum
@@ -302,6 +299,163 @@ export class PurchaseOrderController {
         total: filteredData.length,
         totalPages: Math.ceil(filteredData.length / limit),
       },
+    };
+  }
+
+  @Post(':id/payments')
+  @ApiOperation({ summary: 'Add payment to purchase order' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Payment added successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Payment amount exceeds due amount',
+  })
+  @HttpCode(HttpStatus.CREATED)
+  async addPayment(
+    @Param('id') id: string,
+    @Body() createPaymentDto: CreatePurchaseOrderPaymentDto,
+  ) {
+    const result = await this.purchaseOrderService.addPayment(id, createPaymentDto);
+    
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: 'Payment added successfully',
+      data: {
+        payment: result.payment,
+        purchaseOrder: result.updatedPO,
+      },
+    };
+  }
+
+  @Get(':id/payments/summary')
+  @ApiOperation({ summary: 'Get payment summary for purchase order' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment summary retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  async getPaymentSummary(
+    @Param('id') id: string,
+  ): Promise<{ statusCode: number; message: string; data: PaymentSummaryDto }> {
+    const paymentSummary = await this.purchaseOrderService.getPaymentSummary(id);
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Payment summary retrieved successfully',
+      data: paymentSummary,
+    };
+  }
+
+  @Get(':id/payments')
+  @ApiOperation({ summary: 'Get all payments for purchase order' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payments retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Purchase order not found',
+  })
+  async getPayments(
+    @Param('id') id: string,
+  ) {
+    const payments = await this.purchaseOrderService.getPayments(id);
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Payments retrieved successfully',
+      data: payments,
+    };
+  }
+
+  @Patch('payments/:paymentId')
+  @ApiOperation({ summary: 'Update a payment' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment updated successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Payment not found',
+  })
+  async updatePayment(
+    @Param('paymentId') paymentId: string,
+    @Body() updateData: Partial<CreatePurchaseOrderPaymentDto>,
+  ) {
+    const payment = await this.purchaseOrderService.updatePayment(paymentId, updateData);
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Payment updated successfully',
+      data: payment,
+    };
+  }
+
+  @Delete('payments/:paymentId')
+  @ApiOperation({ summary: 'Delete a payment' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment deleted successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Payment not found',
+  })
+  async deletePayment(
+    @Param('paymentId') paymentId: string,
+  ) {
+    const result = await this.purchaseOrderService.deletePayment(paymentId);
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: result.message,
+      data: {
+        revertedAmount: result.revertedAmount,
+      },
+    };
+  }
+
+  @Get('due/list')
+  @ApiOperation({ summary: 'Get all purchase orders with due payments' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (starts from 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of items per page',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Due purchase orders retrieved successfully',
+  })
+  async getDuePurchaseOrders(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.purchaseOrderService.getDuePurchaseOrders(
+      page || 1,
+      limit || 10,
+    );
+    
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Due purchase orders retrieved successfully',
+      data: result.data,
+      meta: result.meta,
     };
   }
 }

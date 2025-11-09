@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaymentType, POStatus } from '@prisma/client';
+import { PaymentMethod, PaymentType, POStatus } from '@prisma/client';
 
 export class PurchaseOrderItemDto {
   @ApiProperty({ description: 'Product name' })
@@ -119,10 +119,6 @@ export class CreatePurchaseOrderDto {
   @ValidateNested({ each: true })
   @Type(() => PurchaseOrderInvestmentDto)
   investments: PurchaseOrderInvestmentDto[];
-
-  @ApiProperty({ description: 'User ID who created the PO' })
-  @IsString()
-  createdBy: string;
 }
 
 export class UpdatePurchaseOrderDto implements Partial<CreatePurchaseOrderDto> {
@@ -231,4 +227,73 @@ export class PurchaseOrderQueryDto {
   @IsNumber()
   @Min(1)
   limit?: number;
+}
+
+export class CreatePurchaseOrderPaymentDto {
+  @ApiProperty({ description: 'Payment amount', minimum: 0.01 })
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @ApiProperty({ enum: PaymentMethod, description: 'Payment method' })
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
+
+  @ApiPropertyOptional({ description: 'Payment reference number' })
+  @IsOptional()
+  @IsString()
+  reference?: string;
+
+  @ApiPropertyOptional({ description: 'Payment notes' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiPropertyOptional({ description: 'Payment date' })
+  @IsOptional()
+  @IsDateString()
+  paymentDate?: string;
+}
+
+export class PurchaseOrderPaymentResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  amount: number;
+
+  @ApiProperty()
+  paymentDate: Date;
+
+  @ApiProperty()
+  paymentMethod: PaymentMethod;
+
+  @ApiProperty()
+  reference?: string;
+
+  @ApiProperty()
+  notes?: string;
+
+  @ApiProperty()
+  purchaseOrderId: string;
+
+  @ApiProperty()
+  createdAt: Date;
+}
+
+export class PaymentSummaryDto {
+  @ApiProperty()
+  totalAmount: number;
+
+  @ApiProperty()
+  totalPaid: number;
+
+  @ApiProperty()
+  remainingDue: number;
+
+  @ApiProperty()
+  paymentCount: number;
+
+  @ApiProperty({ type: [PurchaseOrderPaymentResponseDto] })
+  payments: PurchaseOrderPaymentResponseDto[];
 }

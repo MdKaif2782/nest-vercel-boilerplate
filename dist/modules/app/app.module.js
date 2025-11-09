@@ -14,6 +14,7 @@ const config_1 = require("@nestjs/config");
 const auth_module_1 = require("../auth/auth.module");
 const investor_module_1 = require("../investor/investor.module");
 const po_module_1 = require("../po/po.module");
+const inventory_module_1 = require("../inventory/inventory.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -26,7 +27,8 @@ exports.AppModule = AppModule = __decorate([
             }),
             auth_module_1.AuthModule,
             investor_module_1.InvestorModule,
-            po_module_1.PoModule
+            po_module_1.PoModule,
+            inventory_module_1.InventoryModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

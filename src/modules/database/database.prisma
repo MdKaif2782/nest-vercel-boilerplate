@@ -60,6 +60,22 @@ model PurchaseOrder {
   inventory   Inventory[]
   
   @@map("purchase_orders")
+  payments PurchaseOrderPayment[]
+}
+
+model PurchaseOrderPayment {
+  id          String   @id @default(cuid())
+  amount      Float
+  paymentDate DateTime @default(now())
+  paymentMethod PaymentMethod
+  reference   String?
+  notes       String?
+  
+  // Relations
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  
+  @@map("purchase_order_payments")
 }
 
 model PurchaseOrderItem {
