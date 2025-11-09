@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, POStatus, PaymentType } from '@prisma/client';
-import { DatabaseService } from '../database/database.service'; // Adjust path as needed
+import { DatabaseService } from '../database/database.service';
 import { PurchaseOrderInvestmentDto, CreatePurchaseOrderDto, UpdatePurchaseOrderDto, MarkAsReceivedDto, CreatePurchaseOrderPaymentDto, PaymentSummaryDto } from './dto';
 
 @Injectable()
@@ -88,53 +88,51 @@ export class PurchaseOrderService {
       poData.totalAmount
     );
 
-    return await this.database.$transaction(async (prisma) => {
-      // Create purchase order
-      const purchaseOrder = await prisma.purchaseOrder.create({
+    // Create purchase order with items
+    const purchaseOrder = await this.database.purchaseOrder.create({
+      data: {
+        createdBy: createdBy,
+        ...poData,
+        poNumber: await this.generatePONumber(),
+        status: POStatus.PENDING,
+        items: {
+          create: items.map(item => ({
+            ...item,
+            taxPercentage: item.taxPercentage || 0,
+          }))
+        }
+      },
+      include: { items: true }
+    });
+
+    // Create investments
+    for (const investment of processedInvestments) {
+      await this.database.purchaseOrderInvestment.create({
         data: {
-          createdBy: createdBy,
-          ...poData,
-          poNumber: await this.generatePONumber(),
-          status: POStatus.PENDING,
-          items: {
-            create: items.map(item => ({
-              ...item,
-              taxPercentage: item.taxPercentage || 0, // Handle zero tax
-            }))
-          }
-        },
-        include: { items: true }
-      });
-
-      // Create investments
-      for (const investment of processedInvestments) {
-        await prisma.purchaseOrderInvestment.create({
-          data: {
-            ...investment,
-            purchaseOrderId: purchaseOrder.id,
-          }
-        });
-      }
-
-      // Return complete purchase order with investments
-      return await prisma.purchaseOrder.findUnique({
-        where: { id: purchaseOrder.id },
-        include: {
-          items: true,
-          investments: {
-            include: {
-              investor: true
-            }
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
+          ...investment,
+          purchaseOrderId: purchaseOrder.id,
         }
       });
+    }
+
+    // Return complete purchase order with investments
+    return await this.database.purchaseOrder.findUnique({
+      where: { id: purchaseOrder.id },
+      include: {
+        items: true,
+        investments: {
+          include: {
+            investor: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     });
   }
 
@@ -157,64 +155,62 @@ export class PurchaseOrderService {
       throw new BadRequestException('Cannot modify a received purchase order');
     }
 
-    return await this.database.$transaction(async (prisma) => {
-      // Update basic PO data
-      const updatedPO = await prisma.purchaseOrder.update({
-        where: { id },
-        data: poData
+    // Update basic PO data
+    const updatedPO = await this.database.purchaseOrder.update({
+      where: { id },
+      data: poData
+    });
+
+    // Update items if provided
+    if (items) {
+      // Delete existing items
+      await this.database.purchaseOrderItem.deleteMany({
+        where: { purchaseOrderId: id }
       });
 
-      // Update items if provided
-      if (items) {
-        // Delete existing items
-        await prisma.purchaseOrderItem.deleteMany({
-          where: { purchaseOrderId: id }
-        });
+      // Create new items
+      await this.database.purchaseOrderItem.createMany({
+        data: items.map(item => ({
+          ...item,
+          purchaseOrderId: id,
+          taxPercentage: item.taxPercentage || 0,
+        }))
+      });
+    }
 
-        // Create new items
-        await prisma.purchaseOrderItem.createMany({
-          data: items.map(item => ({
-            ...item,
+    // Update investments if provided
+    if (investments) {
+      const { processedInvestments } = await this.validateAndProcessInvestments(
+        investments,
+        poData.totalAmount || existingPO.totalAmount
+      );
+
+      // Delete existing investments
+      await this.database.purchaseOrderInvestment.deleteMany({
+        where: { purchaseOrderId: id }
+      });
+
+      // Create new investments
+      for (const investment of processedInvestments) {
+        await this.database.purchaseOrderInvestment.create({
+          data: {
+            ...investment,
             purchaseOrderId: id,
-            taxPercentage: item.taxPercentage || 0,
-          }))
+          }
         });
       }
+    }
 
-      // Update investments if provided
-      if (investments) {
-        const { processedInvestments } = await this.validateAndProcessInvestments(
-          investments,
-          poData.totalAmount || existingPO.totalAmount
-        );
-
-        // Delete existing investments
-        await prisma.purchaseOrderInvestment.deleteMany({
-          where: { purchaseOrderId: id }
-        });
-
-        // Create new investments
-        for (const investment of processedInvestments) {
-          await prisma.purchaseOrderInvestment.create({
-            data: {
-              ...investment,
-              purchaseOrderId: id,
-            }
-          });
-        }
-      }
-
-      return await prisma.purchaseOrder.findUnique({
-        where: { id },
-        include: {
-          items: true,
-          investments: {
-            include: {
-              investor: true
-            }
+    return await this.database.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        items: true,
+        investments: {
+          include: {
+            investor: true
           }
         }
-      });
+      }
     });
   }
 
@@ -244,48 +240,44 @@ export class PurchaseOrderService {
       }
     }
 
-    return await this.database.$transaction(async (prisma) => {
-      // Update PO status and received date
-      const updatedPO = await prisma.purchaseOrder.update({
-        where: { id },
+    // Update PO status and received date
+    const updatedPO = await this.database.purchaseOrder.update({
+      where: { id },
+      data: {
+        status: POStatus.RECEIVED,
+        receivedAt: new Date(),
+      }
+    });
+
+    // Create inventory items
+    const createdInventoryItems = [];
+    for (const receivedItem of receivedItems) {
+      const poItem = purchaseOrder.items.find(item => item.id === receivedItem.purchaseOrderItemId)!;
+
+      // Generate product code from product name
+      const productCode = poItem.productName
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '_')
+        .substring(0, 20) + `_${Date.now()}`;
+
+      const inventoryItem = await this.database.inventory.create({
         data: {
-          status: POStatus.RECEIVED,
-          receivedAt: new Date(),
+          productCode,
+          productName: poItem.productName,
+          description: poItem.description,
+          quantity: receivedItem.receivedQuantity,
+          purchasePrice: poItem.unitPrice,
+          expectedSalePrice: receivedItem.expectedSalePrice,
+          purchaseOrderId: id,
         }
       });
+      createdInventoryItems.push(inventoryItem);
+    }
 
-      // Create inventory items
-      for (const receivedItem of receivedItems) {
-        const poItem = purchaseOrder.items.find(item => item.id === receivedItem.purchaseOrderItemId)!;
-
-        // Generate product code from product name
-        const productCode = poItem.productName
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '_')
-          .substring(0, 20) + `_${Date.now()}`;
-
-        await prisma.inventory.create({
-          data: {
-            productCode,
-            productName: poItem.productName,
-            description: poItem.description,
-            quantity: receivedItem.receivedQuantity,
-            purchasePrice: poItem.unitPrice,
-            expectedSalePrice: receivedItem.expectedSalePrice,
-            purchaseOrderId: id,
-          }
-        });
-      }
-
-      return {
-        ...updatedPO,
-        inventoryItems: receivedItems.map(ri => ({
-          productName: purchaseOrder.items.find(item => item.id === ri.purchaseOrderItemId)?.productName,
-          receivedQuantity: ri.receivedQuantity,
-          expectedSalePrice: ri.expectedSalePrice
-        }))
-      };
-    });
+    return {
+      ...updatedPO,
+      inventoryItems: createdInventoryItems
+    };
   }
 
   // Get purchase order by ID
@@ -399,51 +391,47 @@ export class PurchaseOrderService {
       throw new BadRequestException('Payment amount must be greater than 0');
     }
 
-    return await this.database.$transaction(async (prisma) => {
-      // Create payment record
-      const payment = await prisma.purchaseOrderPayment.create({
-        data: {
-          amount,
-          paymentMethod,
-          reference,
-          notes,
-          paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-          purchaseOrderId,
-        },
-      });
+    // Create payment record
+    const payment = await this.database.purchaseOrderPayment.create({
+      data: {
+        amount,
+        paymentMethod,
+        reference,
+        notes,
+        paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        purchaseOrderId,
+      },
+    });
 
-      // Update purchase order due amount
-      const updatedPO = await prisma.purchaseOrder.update({
-        where: { id: purchaseOrderId },
-        data: {
-          dueAmount: {
-            decrement: amount,
-          },
-          // If due amount becomes 0, you might want to update status or add a flag
-          // status: purchaseOrder.dueAmount - amount <= 0 ? POStatus.PAID : purchaseOrder.status,
+    // Update purchase order due amount
+    const updatedPO = await this.database.purchaseOrder.update({
+      where: { id: purchaseOrderId },
+      data: {
+        dueAmount: {
+          decrement: amount,
         },
-        include: {
-          payments: {
-            orderBy: { paymentDate: 'desc' }
-          },
-          items: true,
-          investments: {
-            include: {
-              investor: true
-            }
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+      },
+      include: {
+        payments: {
+          orderBy: { paymentDate: 'desc' }
+        },
+        items: true,
+        investments: {
+          include: {
+            investor: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
           }
         }
-      });
-
-      return { payment, updatedPO };
+      }
     });
+
+    return { payment, updatedPO };
   }
 
   /**
@@ -529,25 +517,23 @@ export class PurchaseOrderService {
         throw new BadRequestException('Updated payment amount would make due amount negative');
       }
 
-      return await this.database.$transaction(async (prisma) => {
-        // Update payment
-        const updatedPayment = await prisma.purchaseOrderPayment.update({
-          where: { id: paymentId },
-          data: updateData,
-        });
-
-        // Adjust purchase order due amount
-        await prisma.purchaseOrder.update({
-          where: { id: payment.purchaseOrderId },
-          data: {
-            dueAmount: {
-              increment: -amountDifference, // Subtract the difference
-            }
-          }
-        });
-
-        return updatedPayment;
+      // Update payment
+      const updatedPayment = await this.database.purchaseOrderPayment.update({
+        where: { id: paymentId },
+        data: updateData,
       });
+
+      // Adjust purchase order due amount
+      await this.database.purchaseOrder.update({
+        where: { id: payment.purchaseOrderId },
+        data: {
+          dueAmount: {
+            increment: -amountDifference,
+          }
+        }
+      });
+
+      return updatedPayment;
     }
 
     // If not updating amount, just update the payment
@@ -570,34 +556,32 @@ export class PurchaseOrderService {
       throw new NotFoundException(`Payment with ID ${paymentId} not found`);
     }
 
-    return await this.database.$transaction(async (prisma) => {
-      // Delete the payment
-      await prisma.purchaseOrderPayment.delete({
-        where: { id: paymentId },
-      });
-
-      // Revert the due amount
-      const updatedPO = await prisma.purchaseOrder.update({
-        where: { id: payment.purchaseOrderId },
-        data: {
-          dueAmount: {
-            increment: payment.amount,
-          }
-        }
-      });
-
-      return { message: 'Payment deleted successfully', revertedAmount: payment.amount };
+    // Delete the payment
+    await this.database.purchaseOrderPayment.delete({
+      where: { id: paymentId },
     });
+
+    // Revert the due amount
+    await this.database.purchaseOrder.update({
+      where: { id: payment.purchaseOrderId },
+      data: {
+        dueAmount: {
+          increment: payment.amount,
+        }
+      }
+    });
+
+    return { message: 'Payment deleted successfully', revertedAmount: payment.amount };
   }
 
   async getDuePurchaseOrders(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
-  const [purchaseOrders, total] = await Promise.all([
+    const [purchaseOrders, total] = await Promise.all([
       this.database.purchaseOrder.findMany({
         where: {
-          dueAmount: { gt: 0 }, // Only orders with due amount
-          status: { not: POStatus.CANCELLED } // Exclude cancelled orders
+          dueAmount: { gt: 0 },
+          status: { not: POStatus.CANCELLED }
         },
         include: {
           payments: {

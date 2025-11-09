@@ -12,22 +12,12 @@ export declare class PurchaseOrderService {
             id: string;
             email: string;
         };
-        items: {
-            id: string;
-            productName: string;
-            description: string | null;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-            purchaseOrderId: string;
-        }[];
         investments: ({
             investor: {
                 name: string;
                 id: string;
-                createdAt: Date;
                 email: string;
+                createdAt: Date;
                 phone: string | null;
                 address: string | null;
                 taxId: string | null;
@@ -37,14 +27,26 @@ export declare class PurchaseOrderService {
             };
         } & {
             id: string;
-            purchaseOrderId: string;
             investmentAmount: number;
             profitPercentage: number;
             isFullInvestment: boolean;
+            purchaseOrderId: string;
             investorId: string;
         })[];
+        items: {
+            id: string;
+            purchaseOrderId: string;
+            description: string | null;
+            productName: string;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+        }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
@@ -56,28 +58,16 @@ export declare class PurchaseOrderService {
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
     updatePurchaseOrder(id: string, dto: UpdatePurchaseOrderDto): Promise<{
-        items: {
-            id: string;
-            productName: string;
-            description: string | null;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-            purchaseOrderId: string;
-        }[];
         investments: ({
             investor: {
                 name: string;
                 id: string;
-                createdAt: Date;
                 email: string;
+                createdAt: Date;
                 phone: string | null;
                 address: string | null;
                 taxId: string | null;
@@ -87,14 +77,26 @@ export declare class PurchaseOrderService {
             };
         } & {
             id: string;
-            purchaseOrderId: string;
             investmentAmount: number;
             profitPercentage: number;
             isFullInvestment: boolean;
+            purchaseOrderId: string;
             investorId: string;
         })[];
+        items: {
+            id: string;
+            purchaseOrderId: string;
+            description: string | null;
+            productName: string;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+        }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
@@ -106,8 +108,6 @@ export declare class PurchaseOrderService {
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
@@ -118,6 +118,8 @@ export declare class PurchaseOrderService {
             expectedSalePrice: number;
         }[];
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
@@ -129,8 +131,6 @@ export declare class PurchaseOrderService {
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
@@ -144,10 +144,10 @@ export declare class PurchaseOrderService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            productName: string;
-            description: string | null;
-            quantity: number;
             purchaseOrderId: string;
+            description: string | null;
+            productName: string;
+            quantity: number;
             expectedSalePrice: number;
             productCode: string;
             barcode: string | null;
@@ -155,22 +155,12 @@ export declare class PurchaseOrderService {
             minStockLevel: number | null;
             maxStockLevel: number | null;
         }[];
-        items: {
-            id: string;
-            productName: string;
-            description: string | null;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-            purchaseOrderId: string;
-        }[];
         investments: ({
             investor: {
                 name: string;
                 id: string;
-                createdAt: Date;
                 email: string;
+                createdAt: Date;
                 phone: string | null;
                 address: string | null;
                 taxId: string | null;
@@ -180,14 +170,26 @@ export declare class PurchaseOrderService {
             };
         } & {
             id: string;
-            purchaseOrderId: string;
             investmentAmount: number;
             profitPercentage: number;
             isFullInvestment: boolean;
+            purchaseOrderId: string;
             investorId: string;
         })[];
+        items: {
+            id: string;
+            purchaseOrderId: string;
+            description: string | null;
+            productName: string;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+        }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
@@ -199,8 +201,6 @@ export declare class PurchaseOrderService {
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
@@ -211,22 +211,12 @@ export declare class PurchaseOrderService {
                 id: string;
                 email: string;
             };
-            items: {
-                id: string;
-                productName: string;
-                description: string | null;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-                purchaseOrderId: string;
-            }[];
             investments: ({
                 investor: {
                     name: string;
                     id: string;
-                    createdAt: Date;
                     email: string;
+                    createdAt: Date;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -236,14 +226,26 @@ export declare class PurchaseOrderService {
                 };
             } & {
                 id: string;
-                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
+                purchaseOrderId: string;
                 investorId: string;
             })[];
+            items: {
+                id: string;
+                purchaseOrderId: string;
+                description: string | null;
+                productName: string;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+            }[];
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
@@ -255,8 +257,6 @@ export declare class PurchaseOrderService {
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];
@@ -264,6 +264,8 @@ export declare class PurchaseOrderService {
     }>;
     delete(id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
@@ -275,8 +277,6 @@ export declare class PurchaseOrderService {
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
@@ -296,18 +296,18 @@ export declare class PurchaseOrderService {
         notes: string | null;
         purchaseOrderId: string;
         amount: number;
-        paymentDate: Date;
         paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
+        paymentDate: Date;
     })[]>;
     updatePayment(paymentId: string, updateData: Partial<CreatePurchaseOrderPaymentDto>): Promise<{
         id: string;
         notes: string | null;
         purchaseOrderId: string;
         amount: number;
-        paymentDate: Date;
         paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
+        paymentDate: Date;
     }>;
     deletePayment(paymentId: string): Promise<{
         message: string;
@@ -319,20 +319,22 @@ export declare class PurchaseOrderService {
                 name: string;
                 email: string;
             };
+            _count: {
+                payments: number;
+            };
             payments: {
                 id: string;
                 notes: string | null;
                 purchaseOrderId: string;
                 amount: number;
-                paymentDate: Date;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 reference: string | null;
+                paymentDate: Date;
             }[];
-            _count: {
-                payments: number;
-            };
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
@@ -344,8 +346,6 @@ export declare class PurchaseOrderService {
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];

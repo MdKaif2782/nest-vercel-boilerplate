@@ -30,21 +30,6 @@ async function bootstrap() {
     ],
   });
 
-    
-  // Enable CORS with specific origin and credentials
-  app.enableCors({
-    origin: 'http://localhost:3000', // Your frontend URL
-    credentials: true, // Allow cookies/auth headers
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type', 
-      'Authorization', 
-      'X-Requested-With',
-      'Accept',
-      'Origin'
-    ],
-  });
-
   app.useGlobalPipes(new ValidationPipe());
 
   console.log(`Listening on port ${process.env.PORT}`);

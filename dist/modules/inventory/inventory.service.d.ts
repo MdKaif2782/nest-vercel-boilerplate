@@ -12,18 +12,18 @@ export declare class InventoryService {
             };
         } & {
             id: string;
-            productCode: string;
-            barcode: string | null;
-            productName: string;
-            description: string | null;
-            quantity: number;
-            purchasePrice: number;
-            expectedSalePrice: number;
-            minStockLevel: number | null;
-            maxStockLevel: number | null;
             createdAt: Date;
             updatedAt: Date;
             purchaseOrderId: string;
+            description: string | null;
+            productName: string;
+            quantity: number;
+            expectedSalePrice: number;
+            productCode: string;
+            barcode: string | null;
+            purchasePrice: number;
+            minStockLevel: number | null;
+            maxStockLevel: number | null;
         })[];
         meta: {
             page: number;
@@ -40,18 +40,18 @@ export declare class InventoryService {
         };
     } & {
         id: string;
-        productCode: string;
-        barcode: string | null;
-        productName: string;
-        description: string | null;
-        quantity: number;
-        purchasePrice: number;
-        expectedSalePrice: number;
-        minStockLevel: number | null;
-        maxStockLevel: number | null;
         createdAt: Date;
         updatedAt: Date;
         purchaseOrderId: string;
+        description: string | null;
+        productName: string;
+        quantity: number;
+        expectedSalePrice: number;
+        productCode: string;
+        barcode: string | null;
+        purchasePrice: number;
+        minStockLevel: number | null;
+        maxStockLevel: number | null;
     }>;
     update(id: string, updateInventoryDto: UpdateInventoryDto): Promise<{
         purchaseOrder: {
@@ -60,18 +60,18 @@ export declare class InventoryService {
         };
     } & {
         id: string;
-        productCode: string;
-        barcode: string | null;
-        productName: string;
-        description: string | null;
-        quantity: number;
-        purchasePrice: number;
-        expectedSalePrice: number;
-        minStockLevel: number | null;
-        maxStockLevel: number | null;
         createdAt: Date;
         updatedAt: Date;
         purchaseOrderId: string;
+        description: string | null;
+        productName: string;
+        quantity: number;
+        expectedSalePrice: number;
+        productCode: string;
+        barcode: string | null;
+        purchasePrice: number;
+        minStockLevel: number | null;
+        maxStockLevel: number | null;
     }>;
     getLowStockItems(threshold?: number): Promise<({
         purchaseOrder: {
@@ -80,17 +80,17 @@ export declare class InventoryService {
         };
     } & {
         id: string;
-        productCode: string;
-        barcode: string | null;
-        productName: string;
-        description: string | null;
-        quantity: number;
-        purchasePrice: number;
-        expectedSalePrice: number;
-        minStockLevel: number | null;
-        maxStockLevel: number | null;
         createdAt: Date;
         updatedAt: Date;
         purchaseOrderId: string;
+        description: string | null;
+        productName: string;
+        quantity: number;
+        expectedSalePrice: number;
+        productCode: string;
+        barcode: string | null;
+        purchasePrice: number;
+        minStockLevel: number | null;
+        maxStockLevel: number | null;
     })[]>;
 }
