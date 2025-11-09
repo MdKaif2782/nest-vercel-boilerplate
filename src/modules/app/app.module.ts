@@ -8,6 +8,7 @@ import { InvestorModule } from '../investor/investor.module';
 import { PoModule } from '../po/po.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { QuotationModule } from '../quotation/quotation.module';
+import { OrderModule } from '../order/order.module';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { QuotationModule } from '../quotation/quotation.module';
     InvestorModule,
     PoModule,
     InventoryModule,
-    QuotationModule
+    QuotationModule,
+    OrderModule
     //FirebaseModule,
   ],
   controllers: [AppController],
