@@ -7,6 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 import { InvestorModule } from '../investor/investor.module';
 import { PoModule } from '../po/po.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { QuotationModule } from '../quotation/quotation.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { InventoryModule } from '../inventory/inventory.module';
     AuthModule,
     InvestorModule,
     PoModule,
-    InventoryModule
+    InventoryModule,
+    QuotationModule
     //FirebaseModule,
   ],
   controllers: [AppController],
