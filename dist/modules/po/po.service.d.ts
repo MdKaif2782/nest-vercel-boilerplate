@@ -112,11 +112,7 @@ export declare class PurchaseOrderService {
         createdBy: string;
     }>;
     markAsReceived(id: string, dto: MarkAsReceivedDto): Promise<{
-        inventoryItems: {
-            productName: string;
-            receivedQuantity: number;
-            expectedSalePrice: number;
-        }[];
+        inventoryItems: any[];
         id: string;
         createdAt: Date;
         updatedAt: Date;

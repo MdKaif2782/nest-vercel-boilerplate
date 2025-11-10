@@ -28,18 +28,6 @@ async function bootstrap() {
             'Origin'
         ],
     });
-    app.enableCors({
-        origin: 'http://localhost:3000',
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: [
-            'Content-Type',
-            'Authorization',
-            'X-Requested-With',
-            'Accept',
-            'Origin'
-        ],
-    });
     app.useGlobalPipes(new common_1.ValidationPipe());
     console.log(`Listening on port ${process.env.PORT}`);
     const port = process.env.PORT || 3000;

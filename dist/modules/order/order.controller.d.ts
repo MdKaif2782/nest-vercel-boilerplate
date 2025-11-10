@@ -1,0 +1,490 @@
+import { OrderService } from './order.service';
+import { CreateOrderDto, UpdateOrderDto, OrderSummaryDto, InvestorProfitSummaryDto, OrderProductDto, OrderTimelineEventDto } from './dto';
+export declare class OrderController {
+    private readonly orderService;
+    constructor(orderService: OrderService);
+    create(createOrderDto: CreateOrderDto): Promise<{
+        quotation: {
+            items: ({
+                inventory: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
+                    productName: string;
+                    quantity: number;
+                    expectedSalePrice: number;
+                    productCode: string;
+                    barcode: string | null;
+                    purchasePrice: number;
+                    minStockLevel: number | null;
+                    maxStockLevel: number | null;
+                };
+            } & {
+                id: string;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number | null;
+                totalPrice: number;
+                inventoryId: string;
+                mrp: number;
+                packagePrice: number;
+                quotationId: string;
+            })[];
+        } & {
+            id: string;
+            createdAt: Date;
+            status: import(".prisma/client").$Enums.QuotationStatus;
+            totalAmount: number;
+            taxAmount: number;
+            companyName: string;
+            companyAddress: string;
+            companyContact: string | null;
+            deliveryTerms: string | null;
+            deliveryDays: number | null;
+            moneyInWords: string | null;
+            validUntil: Date | null;
+            quotationNumber: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        poNumber: string;
+        poDate: Date;
+        pdfUrl: string | null;
+        externalUrl: string | null;
+        quotationId: string;
+    }>;
+    findAll(page?: number, limit?: number, status?: string): Promise<{
+        data: ({
+            quotation: {
+                items: ({
+                    inventory: {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        purchaseOrderId: string;
+                        description: string | null;
+                        productName: string;
+                        quantity: number;
+                        expectedSalePrice: number;
+                        productCode: string;
+                        barcode: string | null;
+                        purchasePrice: number;
+                        minStockLevel: number | null;
+                        maxStockLevel: number | null;
+                    };
+                } & {
+                    id: string;
+                    quantity: number;
+                    unitPrice: number;
+                    taxPercentage: number | null;
+                    totalPrice: number;
+                    inventoryId: string;
+                    mrp: number;
+                    packagePrice: number;
+                    quotationId: string;
+                })[];
+            } & {
+                id: string;
+                createdAt: Date;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
+                companyName: string;
+                companyAddress: string;
+                companyContact: string | null;
+                deliveryTerms: string | null;
+                deliveryDays: number | null;
+                moneyInWords: string | null;
+                validUntil: Date | null;
+                quotationNumber: string;
+            };
+            bills: ({
+                profitDistributions: ({
+                    investor: {
+                        name: string;
+                        id: string;
+                        email: string;
+                        createdAt: Date;
+                        phone: string | null;
+                        address: string | null;
+                        taxId: string | null;
+                        bankAccount: string | null;
+                        bankName: string | null;
+                        isActive: boolean;
+                    };
+                } & {
+                    id: string;
+                    investorId: string;
+                    distributionDate: Date;
+                    amount: number;
+                    description: string | null;
+                    billId: string;
+                })[];
+                items: {
+                    id: string;
+                    billId: string;
+                    quantity: number;
+                    unitPrice: number;
+                    totalPrice: number;
+                    inventoryId: string;
+                    productDescription: string;
+                    packagingDescription: string | null;
+                }[];
+                payments: {
+                    id: string;
+                    amount: number;
+                    billId: string;
+                    paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+                    reference: string | null;
+                    paymentDate: Date;
+                }[];
+            } & {
+                id: string;
+                status: import(".prisma/client").$Enums.BillStatus;
+                totalAmount: number;
+                taxAmount: number;
+                dueAmount: number;
+                createdBy: string;
+                billNumber: string;
+                billDate: Date;
+                vatRegNo: string;
+                code: string;
+                vendorNo: string;
+                buyerPOId: string;
+            })[];
+            challans: ({
+                items: ({
+                    inventory: {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        purchaseOrderId: string;
+                        description: string | null;
+                        productName: string;
+                        quantity: number;
+                        expectedSalePrice: number;
+                        productCode: string;
+                        barcode: string | null;
+                        purchasePrice: number;
+                        minStockLevel: number | null;
+                        maxStockLevel: number | null;
+                    };
+                } & {
+                    id: string;
+                    quantity: number;
+                    inventoryId: string;
+                    challanId: string;
+                })[];
+            } & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                status: import(".prisma/client").$Enums.ChallanStatus;
+                challanNumber: string;
+                dispatchDate: Date | null;
+                deliveryDate: Date | null;
+                buyerPurchaseOrderId: string;
+            })[];
+        } & {
+            id: string;
+            createdAt: Date;
+            poNumber: string;
+            poDate: Date;
+            pdfUrl: string | null;
+            externalUrl: string | null;
+            quotationId: string;
+        })[];
+        meta: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+        };
+    }>;
+    getStatistics(): Promise<{
+        totalOrders: number;
+        statusBreakdown: (import(".prisma/client").Prisma.PickEnumerable<import(".prisma/client").Prisma.QuotationGroupByOutputType, "status"[]> & {
+            _count: {
+                id: number;
+            };
+        })[];
+        totalBilledAmount: number;
+        totalPaidAmount: number;
+        pendingAmount: number;
+        recentOrders: {
+            id: string;
+            poNumber: string;
+            companyName: string;
+            totalAmount: number;
+            status: import(".prisma/client").$Enums.QuotationStatus;
+            billCount: number;
+            totalBilled: number;
+        }[];
+    }>;
+    findOne(id: string): Promise<{
+        quotation: {
+            items: ({
+                inventory: {
+                    purchaseOrder: {
+                        investments: ({
+                            investor: {
+                                name: string;
+                                id: string;
+                                email: string;
+                                createdAt: Date;
+                                phone: string | null;
+                                address: string | null;
+                                taxId: string | null;
+                                bankAccount: string | null;
+                                bankName: string | null;
+                                isActive: boolean;
+                            };
+                        } & {
+                            id: string;
+                            investmentAmount: number;
+                            profitPercentage: number;
+                            isFullInvestment: boolean;
+                            purchaseOrderId: string;
+                            investorId: string;
+                        })[];
+                    } & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        poNumber: string;
+                        vendorName: string;
+                        vendorCountry: string;
+                        vendorAddress: string;
+                        vendorContact: string;
+                        paymentType: import(".prisma/client").$Enums.PaymentType;
+                        status: import(".prisma/client").$Enums.POStatus;
+                        totalAmount: number;
+                        taxAmount: number;
+                        dueAmount: number;
+                        notes: string | null;
+                        receivedAt: Date | null;
+                        createdBy: string;
+                    };
+                } & {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
+                    productName: string;
+                    quantity: number;
+                    expectedSalePrice: number;
+                    productCode: string;
+                    barcode: string | null;
+                    purchasePrice: number;
+                    minStockLevel: number | null;
+                    maxStockLevel: number | null;
+                };
+            } & {
+                id: string;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number | null;
+                totalPrice: number;
+                inventoryId: string;
+                mrp: number;
+                packagePrice: number;
+                quotationId: string;
+            })[];
+        } & {
+            id: string;
+            createdAt: Date;
+            status: import(".prisma/client").$Enums.QuotationStatus;
+            totalAmount: number;
+            taxAmount: number;
+            companyName: string;
+            companyAddress: string;
+            companyContact: string | null;
+            deliveryTerms: string | null;
+            deliveryDays: number | null;
+            moneyInWords: string | null;
+            validUntil: Date | null;
+            quotationNumber: string;
+        };
+        bills: ({
+            profitDistributions: ({
+                investor: {
+                    name: string;
+                    id: string;
+                    email: string;
+                    createdAt: Date;
+                    phone: string | null;
+                    address: string | null;
+                    taxId: string | null;
+                    bankAccount: string | null;
+                    bankName: string | null;
+                    isActive: boolean;
+                };
+            } & {
+                id: string;
+                investorId: string;
+                distributionDate: Date;
+                amount: number;
+                description: string | null;
+                billId: string;
+            })[];
+            items: ({
+                inventory: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
+                    productName: string;
+                    quantity: number;
+                    expectedSalePrice: number;
+                    productCode: string;
+                    barcode: string | null;
+                    purchasePrice: number;
+                    minStockLevel: number | null;
+                    maxStockLevel: number | null;
+                };
+            } & {
+                id: string;
+                billId: string;
+                quantity: number;
+                unitPrice: number;
+                totalPrice: number;
+                inventoryId: string;
+                productDescription: string;
+                packagingDescription: string | null;
+            })[];
+            payments: {
+                id: string;
+                amount: number;
+                billId: string;
+                paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+                reference: string | null;
+                paymentDate: Date;
+            }[];
+        } & {
+            id: string;
+            status: import(".prisma/client").$Enums.BillStatus;
+            totalAmount: number;
+            taxAmount: number;
+            dueAmount: number;
+            createdBy: string;
+            billNumber: string;
+            billDate: Date;
+            vatRegNo: string;
+            code: string;
+            vendorNo: string;
+            buyerPOId: string;
+        })[];
+        challans: ({
+            items: ({
+                inventory: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
+                    productName: string;
+                    quantity: number;
+                    expectedSalePrice: number;
+                    productCode: string;
+                    barcode: string | null;
+                    purchasePrice: number;
+                    minStockLevel: number | null;
+                    maxStockLevel: number | null;
+                };
+            } & {
+                id: string;
+                quantity: number;
+                inventoryId: string;
+                challanId: string;
+            })[];
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: import(".prisma/client").$Enums.ChallanStatus;
+            challanNumber: string;
+            dispatchDate: Date | null;
+            deliveryDate: Date | null;
+            buyerPurchaseOrderId: string;
+        })[];
+    } & {
+        id: string;
+        createdAt: Date;
+        poNumber: string;
+        poDate: Date;
+        pdfUrl: string | null;
+        externalUrl: string | null;
+        quotationId: string;
+    }>;
+    getSummary(id: string): Promise<OrderSummaryDto>;
+    getInvestorProfits(id: string): Promise<InvestorProfitSummaryDto[]>;
+    getProducts(id: string): Promise<OrderProductDto[]>;
+    getTimeline(id: string): Promise<OrderTimelineEventDto[]>;
+    update(id: string, updateOrderDto: UpdateOrderDto): Promise<{
+        quotation: {
+            items: ({
+                inventory: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
+                    productName: string;
+                    quantity: number;
+                    expectedSalePrice: number;
+                    productCode: string;
+                    barcode: string | null;
+                    purchasePrice: number;
+                    minStockLevel: number | null;
+                    maxStockLevel: number | null;
+                };
+            } & {
+                id: string;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number | null;
+                totalPrice: number;
+                inventoryId: string;
+                mrp: number;
+                packagePrice: number;
+                quotationId: string;
+            })[];
+        } & {
+            id: string;
+            createdAt: Date;
+            status: import(".prisma/client").$Enums.QuotationStatus;
+            totalAmount: number;
+            taxAmount: number;
+            companyName: string;
+            companyAddress: string;
+            companyContact: string | null;
+            deliveryTerms: string | null;
+            deliveryDays: number | null;
+            moneyInWords: string | null;
+            validUntil: Date | null;
+            quotationNumber: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        poNumber: string;
+        poDate: Date;
+        pdfUrl: string | null;
+        externalUrl: string | null;
+        quotationId: string;
+    }>;
+    delete(id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        poNumber: string;
+        poDate: Date;
+        pdfUrl: string | null;
+        externalUrl: string | null;
+        quotationId: string;
+    }>;
+}

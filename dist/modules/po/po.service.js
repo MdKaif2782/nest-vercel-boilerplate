@@ -67,48 +67,46 @@ let PurchaseOrderService = class PurchaseOrderService {
     async createPurchaseOrder(dto, createdBy) {
         const { items, investments, ...poData } = dto;
         const { processedInvestments } = await this.validateAndProcessInvestments(investments, poData.totalAmount);
-        return await this.database.$transaction(async (prisma) => {
-            const purchaseOrder = await prisma.purchaseOrder.create({
+        const purchaseOrder = await this.database.purchaseOrder.create({
+            data: {
+                createdBy: createdBy,
+                ...poData,
+                poNumber: await this.generatePONumber(),
+                status: client_1.POStatus.PENDING,
+                items: {
+                    create: items.map(item => ({
+                        ...item,
+                        taxPercentage: item.taxPercentage || 0,
+                    }))
+                }
+            },
+            include: { items: true }
+        });
+        for (const investment of processedInvestments) {
+            await this.database.purchaseOrderInvestment.create({
                 data: {
-                    createdBy: createdBy,
-                    ...poData,
-                    poNumber: await this.generatePONumber(),
-                    status: client_1.POStatus.PENDING,
-                    items: {
-                        create: items.map(item => ({
-                            ...item,
-                            taxPercentage: item.taxPercentage || 0,
-                        }))
-                    }
-                },
-                include: { items: true }
-            });
-            for (const investment of processedInvestments) {
-                await prisma.purchaseOrderInvestment.create({
-                    data: {
-                        ...investment,
-                        purchaseOrderId: purchaseOrder.id,
-                    }
-                });
-            }
-            return await prisma.purchaseOrder.findUnique({
-                where: { id: purchaseOrder.id },
-                include: {
-                    items: true,
-                    investments: {
-                        include: {
-                            investor: true
-                        }
-                    },
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true
-                        }
-                    }
+                    ...investment,
+                    purchaseOrderId: purchaseOrder.id,
                 }
             });
+        }
+        return await this.database.purchaseOrder.findUnique({
+            where: { id: purchaseOrder.id },
+            include: {
+                items: true,
+                investments: {
+                    include: {
+                        investor: true
+                    }
+                },
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
         });
     }
     async updatePurchaseOrder(id, dto) {
@@ -123,48 +121,46 @@ let PurchaseOrderService = class PurchaseOrderService {
         if (existingPO.status === client_1.POStatus.RECEIVED) {
             throw new common_1.BadRequestException('Cannot modify a received purchase order');
         }
-        return await this.database.$transaction(async (prisma) => {
-            const updatedPO = await prisma.purchaseOrder.update({
-                where: { id },
-                data: poData
+        const updatedPO = await this.database.purchaseOrder.update({
+            where: { id },
+            data: poData
+        });
+        if (items) {
+            await this.database.purchaseOrderItem.deleteMany({
+                where: { purchaseOrderId: id }
             });
-            if (items) {
-                await prisma.purchaseOrderItem.deleteMany({
-                    where: { purchaseOrderId: id }
-                });
-                await prisma.purchaseOrderItem.createMany({
-                    data: items.map(item => ({
-                        ...item,
+            await this.database.purchaseOrderItem.createMany({
+                data: items.map(item => ({
+                    ...item,
+                    purchaseOrderId: id,
+                    taxPercentage: item.taxPercentage || 0,
+                }))
+            });
+        }
+        if (investments) {
+            const { processedInvestments } = await this.validateAndProcessInvestments(investments, poData.totalAmount || existingPO.totalAmount);
+            await this.database.purchaseOrderInvestment.deleteMany({
+                where: { purchaseOrderId: id }
+            });
+            for (const investment of processedInvestments) {
+                await this.database.purchaseOrderInvestment.create({
+                    data: {
+                        ...investment,
                         purchaseOrderId: id,
-                        taxPercentage: item.taxPercentage || 0,
-                    }))
+                    }
                 });
             }
-            if (investments) {
-                const { processedInvestments } = await this.validateAndProcessInvestments(investments, poData.totalAmount || existingPO.totalAmount);
-                await prisma.purchaseOrderInvestment.deleteMany({
-                    where: { purchaseOrderId: id }
-                });
-                for (const investment of processedInvestments) {
-                    await prisma.purchaseOrderInvestment.create({
-                        data: {
-                            ...investment,
-                            purchaseOrderId: id,
-                        }
-                    });
-                }
-            }
-            return await prisma.purchaseOrder.findUnique({
-                where: { id },
-                include: {
-                    items: true,
-                    investments: {
-                        include: {
-                            investor: true
-                        }
+        }
+        return await this.database.purchaseOrder.findUnique({
+            where: { id },
+            include: {
+                items: true,
+                investments: {
+                    include: {
+                        investor: true
                     }
                 }
-            });
+            }
         });
     }
     async markAsReceived(id, dto) {
@@ -185,41 +181,37 @@ let PurchaseOrderService = class PurchaseOrderService {
                 throw new common_1.BadRequestException(`Purchase order item with ID ${receivedItem.purchaseOrderItemId} not found`);
             }
         }
-        return await this.database.$transaction(async (prisma) => {
-            const updatedPO = await prisma.purchaseOrder.update({
-                where: { id },
+        const updatedPO = await this.database.purchaseOrder.update({
+            where: { id },
+            data: {
+                status: client_1.POStatus.RECEIVED,
+                receivedAt: new Date(),
+            }
+        });
+        const createdInventoryItems = [];
+        for (const receivedItem of receivedItems) {
+            const poItem = purchaseOrder.items.find(item => item.id === receivedItem.purchaseOrderItemId);
+            const productCode = poItem.productName
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '_')
+                .substring(0, 20) + `_${Date.now()}`;
+            const inventoryItem = await this.database.inventory.create({
                 data: {
-                    status: client_1.POStatus.RECEIVED,
-                    receivedAt: new Date(),
+                    productCode,
+                    productName: poItem.productName,
+                    description: poItem.description,
+                    quantity: receivedItem.receivedQuantity,
+                    purchasePrice: poItem.unitPrice,
+                    expectedSalePrice: receivedItem.expectedSalePrice,
+                    purchaseOrderId: id,
                 }
             });
-            for (const receivedItem of receivedItems) {
-                const poItem = purchaseOrder.items.find(item => item.id === receivedItem.purchaseOrderItemId);
-                const productCode = poItem.productName
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, '_')
-                    .substring(0, 20) + `_${Date.now()}`;
-                await prisma.inventory.create({
-                    data: {
-                        productCode,
-                        productName: poItem.productName,
-                        description: poItem.description,
-                        quantity: receivedItem.receivedQuantity,
-                        purchasePrice: poItem.unitPrice,
-                        expectedSalePrice: receivedItem.expectedSalePrice,
-                        purchaseOrderId: id,
-                    }
-                });
-            }
-            return {
-                ...updatedPO,
-                inventoryItems: receivedItems.map(ri => ({
-                    productName: purchaseOrder.items.find(item => item.id === ri.purchaseOrderItemId)?.productName,
-                    receivedQuantity: ri.receivedQuantity,
-                    expectedSalePrice: ri.expectedSalePrice
-                }))
-            };
-        });
+            createdInventoryItems.push(inventoryItem);
+        }
+        return {
+            ...updatedPO,
+            inventoryItems: createdInventoryItems
+        };
     }
     async findOne(id) {
         const purchaseOrder = await this.database.purchaseOrder.findUnique({
@@ -305,45 +297,43 @@ let PurchaseOrderService = class PurchaseOrderService {
         if (amount <= 0) {
             throw new common_1.BadRequestException('Payment amount must be greater than 0');
         }
-        return await this.database.$transaction(async (prisma) => {
-            const payment = await prisma.purchaseOrderPayment.create({
-                data: {
-                    amount,
-                    paymentMethod,
-                    reference,
-                    notes,
-                    paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-                    purchaseOrderId,
+        const payment = await this.database.purchaseOrderPayment.create({
+            data: {
+                amount,
+                paymentMethod,
+                reference,
+                notes,
+                paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+                purchaseOrderId,
+            },
+        });
+        const updatedPO = await this.database.purchaseOrder.update({
+            where: { id: purchaseOrderId },
+            data: {
+                dueAmount: {
+                    decrement: amount,
                 },
-            });
-            const updatedPO = await prisma.purchaseOrder.update({
-                where: { id: purchaseOrderId },
-                data: {
-                    dueAmount: {
-                        decrement: amount,
-                    },
+            },
+            include: {
+                payments: {
+                    orderBy: { paymentDate: 'desc' }
                 },
-                include: {
-                    payments: {
-                        orderBy: { paymentDate: 'desc' }
-                    },
-                    items: true,
-                    investments: {
-                        include: {
-                            investor: true
-                        }
-                    },
-                    user: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true
-                        }
+                items: true,
+                investments: {
+                    include: {
+                        investor: true
+                    }
+                },
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
                     }
                 }
-            });
-            return { payment, updatedPO };
+            }
         });
+        return { payment, updatedPO };
     }
     async getPaymentSummary(purchaseOrderId) {
         const purchaseOrder = await this.database.purchaseOrder.findUnique({
@@ -405,21 +395,19 @@ let PurchaseOrderService = class PurchaseOrderService {
             if (amountDifference + payment.purchaseOrder.dueAmount < 0) {
                 throw new common_1.BadRequestException('Updated payment amount would make due amount negative');
             }
-            return await this.database.$transaction(async (prisma) => {
-                const updatedPayment = await prisma.purchaseOrderPayment.update({
-                    where: { id: paymentId },
-                    data: updateData,
-                });
-                await prisma.purchaseOrder.update({
-                    where: { id: payment.purchaseOrderId },
-                    data: {
-                        dueAmount: {
-                            increment: -amountDifference,
-                        }
-                    }
-                });
-                return updatedPayment;
+            const updatedPayment = await this.database.purchaseOrderPayment.update({
+                where: { id: paymentId },
+                data: updateData,
             });
+            await this.database.purchaseOrder.update({
+                where: { id: payment.purchaseOrderId },
+                data: {
+                    dueAmount: {
+                        increment: -amountDifference,
+                    }
+                }
+            });
+            return updatedPayment;
         }
         return await this.database.purchaseOrderPayment.update({
             where: { id: paymentId },
@@ -434,20 +422,18 @@ let PurchaseOrderService = class PurchaseOrderService {
         if (!payment) {
             throw new common_1.NotFoundException(`Payment with ID ${paymentId} not found`);
         }
-        return await this.database.$transaction(async (prisma) => {
-            await prisma.purchaseOrderPayment.delete({
-                where: { id: paymentId },
-            });
-            const updatedPO = await prisma.purchaseOrder.update({
-                where: { id: payment.purchaseOrderId },
-                data: {
-                    dueAmount: {
-                        increment: payment.amount,
-                    }
-                }
-            });
-            return { message: 'Payment deleted successfully', revertedAmount: payment.amount };
+        await this.database.purchaseOrderPayment.delete({
+            where: { id: paymentId },
         });
+        await this.database.purchaseOrder.update({
+            where: { id: payment.purchaseOrderId },
+            data: {
+                dueAmount: {
+                    increment: payment.amount,
+                }
+            }
+        });
+        return { message: 'Payment deleted successfully', revertedAmount: payment.amount };
     }
     async getDuePurchaseOrders(page = 1, limit = 10) {
         const skip = (page - 1) * limit;

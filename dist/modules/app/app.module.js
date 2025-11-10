@@ -15,6 +15,9 @@ const auth_module_1 = require("../auth/auth.module");
 const investor_module_1 = require("../investor/investor.module");
 const po_module_1 = require("../po/po.module");
 const inventory_module_1 = require("../inventory/inventory.module");
+const quotation_module_1 = require("../quotation/quotation.module");
+const order_module_1 = require("../order/order.module");
+const bill_module_1 = require("../bill/bill.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,7 +31,10 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             investor_module_1.InvestorModule,
             po_module_1.PoModule,
-            inventory_module_1.InventoryModule
+            inventory_module_1.InventoryModule,
+            quotation_module_1.QuotationModule,
+            order_module_1.OrderModule,
+            bill_module_1.BillModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

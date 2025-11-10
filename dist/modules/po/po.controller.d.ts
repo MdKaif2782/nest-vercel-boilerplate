@@ -261,11 +261,7 @@ export declare class PurchaseOrderController {
         statusCode: HttpStatus;
         message: string;
         data: {
-            inventoryItems: {
-                productName: string;
-                receivedQuantity: number;
-                expectedSalePrice: number;
-            }[];
+            inventoryItems: any[];
             id: string;
             createdAt: Date;
             updatedAt: Date;
