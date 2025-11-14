@@ -10,6 +10,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { QuotationModule } from '../quotation/quotation.module';
 import { OrderModule } from '../order/order.module';
 import { BillModule } from '../bill/bill.module';
+import { EmployeeModule } from '../employee/employee.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { BillModule } from '../bill/bill.module';
     InventoryModule,
     QuotationModule,
     OrderModule,
-    BillModule
+    BillModule,
+    EmployeeModule
     //FirebaseModule,
   ],
   controllers: [AppController],
