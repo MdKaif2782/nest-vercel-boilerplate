@@ -8,14 +8,17 @@ export declare class EmployeeService {
     constructor(prisma: DatabaseService);
     private generateEmployeeId;
     create(createEmployeeDto: CreateEmployeeDto): Promise<{
-        id: string;
-        employeeId: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
+        updatedAt: Date;
         phone: string | null;
         address: string | null;
-        designation: string;
+        isActive: boolean;
         joinDate: Date;
+        employeeId: string;
+        designation: string;
         baseSalary: number;
         homeRentAllowance: number;
         healthAllowance: number;
@@ -23,9 +26,6 @@ export declare class EmployeeService {
         mobileAllowance: number;
         otherAllowances: number;
         overtimeRate: number | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         userId: string | null;
     }>;
     findAll(): Promise<({
@@ -35,6 +35,8 @@ export declare class EmployeeService {
         };
         salaries: {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -45,18 +47,19 @@ export declare class EmployeeService {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         }[];
     } & {
-        id: string;
-        employeeId: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
+        updatedAt: Date;
         phone: string | null;
         address: string | null;
-        designation: string;
+        isActive: boolean;
         joinDate: Date;
+        employeeId: string;
+        designation: string;
         baseSalary: number;
         homeRentAllowance: number;
         healthAllowance: number;
@@ -64,9 +67,6 @@ export declare class EmployeeService {
         mobileAllowance: number;
         otherAllowances: number;
         overtimeRate: number | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         userId: string | null;
     })[]>;
     findOne(id: string): Promise<{
@@ -76,6 +76,8 @@ export declare class EmployeeService {
         };
         salaries: {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -86,18 +88,19 @@ export declare class EmployeeService {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         }[];
     } & {
-        id: string;
-        employeeId: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
+        updatedAt: Date;
         phone: string | null;
         address: string | null;
-        designation: string;
+        isActive: boolean;
         joinDate: Date;
+        employeeId: string;
+        designation: string;
         baseSalary: number;
         homeRentAllowance: number;
         healthAllowance: number;
@@ -105,20 +108,20 @@ export declare class EmployeeService {
         mobileAllowance: number;
         otherAllowances: number;
         overtimeRate: number | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         userId: string | null;
     }>;
     update(id: string, updateEmployeeDto: UpdateEmployeeDto): Promise<{
-        id: string;
-        employeeId: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
+        updatedAt: Date;
         phone: string | null;
         address: string | null;
-        designation: string;
+        isActive: boolean;
         joinDate: Date;
+        employeeId: string;
+        designation: string;
         baseSalary: number;
         homeRentAllowance: number;
         healthAllowance: number;
@@ -126,20 +129,20 @@ export declare class EmployeeService {
         mobileAllowance: number;
         otherAllowances: number;
         overtimeRate: number | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         userId: string | null;
     }>;
     remove(id: string): Promise<{
-        id: string;
-        employeeId: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
+        updatedAt: Date;
         phone: string | null;
         address: string | null;
-        designation: string;
+        isActive: boolean;
         joinDate: Date;
+        employeeId: string;
+        designation: string;
         baseSalary: number;
         homeRentAllowance: number;
         healthAllowance: number;
@@ -147,13 +150,12 @@ export declare class EmployeeService {
         mobileAllowance: number;
         otherAllowances: number;
         overtimeRate: number | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         userId: string | null;
     }>;
     createSalary(createSalaryDto: CreateSalaryDto): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.SalaryStatus;
+        paidDate: Date | null;
         employeeId: string;
         baseSalary: number;
         month: number;
@@ -164,11 +166,11 @@ export declare class EmployeeService {
         bonus: number | null;
         deductions: number | null;
         netSalary: number;
-        status: import(".prisma/client").$Enums.SalaryStatus;
-        paidDate: Date | null;
     }>;
     paySalary(paySalaryDto: PaySalaryDto): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.SalaryStatus;
+        paidDate: Date | null;
         employeeId: string;
         baseSalary: number;
         month: number;
@@ -179,11 +181,11 @@ export declare class EmployeeService {
         bonus: number | null;
         deductions: number | null;
         netSalary: number;
-        status: import(".prisma/client").$Enums.SalaryStatus;
-        paidDate: Date | null;
     }>;
     getSalaries(employeeId: string): Promise<{
         id: string;
+        status: import(".prisma/client").$Enums.SalaryStatus;
+        paidDate: Date | null;
         employeeId: string;
         baseSalary: number;
         month: number;
@@ -194,17 +196,17 @@ export declare class EmployeeService {
         bonus: number | null;
         deductions: number | null;
         netSalary: number;
-        status: import(".prisma/client").$Enums.SalaryStatus;
-        paidDate: Date | null;
     }[]>;
     getSalaryReport(month: number, year: number): Promise<({
         employee: {
-            employeeId: string;
             name: string;
+            employeeId: string;
             designation: string;
         };
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.SalaryStatus;
+        paidDate: Date | null;
         employeeId: string;
         baseSalary: number;
         month: number;
@@ -215,8 +217,6 @@ export declare class EmployeeService {
         bonus: number | null;
         deductions: number | null;
         netSalary: number;
-        status: import(".prisma/client").$Enums.SalaryStatus;
-        paidDate: Date | null;
     })[]>;
     generateMonthlySalaries(month?: number, year?: number): Promise<{
         month: number;
@@ -236,12 +236,14 @@ export declare class EmployeeService {
     getPayables(month?: number, year?: number): Promise<{
         unpaid: ({
             employee: {
-                employeeId: string;
                 name: string;
+                employeeId: string;
                 designation: string;
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -252,17 +254,17 @@ export declare class EmployeeService {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         })[];
         paid: ({
             employee: {
-                employeeId: string;
                 name: string;
+                employeeId: string;
                 designation: string;
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -273,8 +275,6 @@ export declare class EmployeeService {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         })[];
         month: number;
         year: number;

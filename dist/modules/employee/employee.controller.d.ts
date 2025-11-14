@@ -11,14 +11,17 @@ export declare class EmployeeController {
         statusCode: HttpStatus;
         message: string;
         data: {
-            id: string;
-            employeeId: string;
             name: string;
+            id: string;
             email: string;
+            createdAt: Date;
+            updatedAt: Date;
             phone: string | null;
             address: string | null;
-            designation: string;
+            isActive: boolean;
             joinDate: Date;
+            employeeId: string;
+            designation: string;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -26,9 +29,6 @@ export declare class EmployeeController {
             mobileAllowance: number;
             otherAllowances: number;
             overtimeRate: number | null;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
             userId: string | null;
         };
     } | {
@@ -45,6 +45,8 @@ export declare class EmployeeController {
             };
             salaries: {
                 id: string;
+                status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -55,18 +57,19 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                status: import(".prisma/client").$Enums.SalaryStatus;
-                paidDate: Date | null;
             }[];
         } & {
-            id: string;
-            employeeId: string;
             name: string;
+            id: string;
             email: string;
+            createdAt: Date;
+            updatedAt: Date;
             phone: string | null;
             address: string | null;
-            designation: string;
+            isActive: boolean;
             joinDate: Date;
+            employeeId: string;
+            designation: string;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -74,9 +77,6 @@ export declare class EmployeeController {
             mobileAllowance: number;
             otherAllowances: number;
             overtimeRate: number | null;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
             userId: string | null;
         })[];
     }>;
@@ -85,12 +85,14 @@ export declare class EmployeeController {
         data: {
             unpaid: ({
                 employee: {
-                    employeeId: string;
                     name: string;
+                    employeeId: string;
                     designation: string;
                 };
             } & {
                 id: string;
+                status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -101,17 +103,17 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                status: import(".prisma/client").$Enums.SalaryStatus;
-                paidDate: Date | null;
             })[];
             paid: ({
                 employee: {
-                    employeeId: string;
                     name: string;
+                    employeeId: string;
                     designation: string;
                 };
             } & {
                 id: string;
+                status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -122,8 +124,6 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                status: import(".prisma/client").$Enums.SalaryStatus;
-                paidDate: Date | null;
             })[];
             month: number;
             year: number;
@@ -189,12 +189,14 @@ export declare class EmployeeController {
         statusCode: HttpStatus;
         data: ({
             employee: {
-                employeeId: string;
                 name: string;
+                employeeId: string;
                 designation: string;
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -205,8 +207,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         })[];
         message?: undefined;
     } | {
@@ -219,6 +219,8 @@ export declare class EmployeeController {
         message: string;
         data: {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -229,8 +231,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         };
     } | {
         statusCode: HttpStatus;
@@ -242,6 +242,8 @@ export declare class EmployeeController {
         message: string;
         data: {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -252,8 +254,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         };
     } | {
         statusCode: HttpStatus;
@@ -292,6 +292,8 @@ export declare class EmployeeController {
             };
             salaries: {
                 id: string;
+                status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -302,18 +304,19 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                status: import(".prisma/client").$Enums.SalaryStatus;
-                paidDate: Date | null;
             }[];
         } & {
-            id: string;
-            employeeId: string;
             name: string;
+            id: string;
             email: string;
+            createdAt: Date;
+            updatedAt: Date;
             phone: string | null;
             address: string | null;
-            designation: string;
+            isActive: boolean;
             joinDate: Date;
+            employeeId: string;
+            designation: string;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -321,9 +324,6 @@ export declare class EmployeeController {
             mobileAllowance: number;
             otherAllowances: number;
             overtimeRate: number | null;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
             userId: string | null;
         };
         message?: undefined;
@@ -336,14 +336,17 @@ export declare class EmployeeController {
         statusCode: HttpStatus;
         message: string;
         data: {
-            id: string;
-            employeeId: string;
             name: string;
+            id: string;
             email: string;
+            createdAt: Date;
+            updatedAt: Date;
             phone: string | null;
             address: string | null;
-            designation: string;
+            isActive: boolean;
             joinDate: Date;
+            employeeId: string;
+            designation: string;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -351,9 +354,6 @@ export declare class EmployeeController {
             mobileAllowance: number;
             otherAllowances: number;
             overtimeRate: number | null;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
             userId: string | null;
         };
     } | {
@@ -369,6 +369,8 @@ export declare class EmployeeController {
         statusCode: HttpStatus;
         data: {
             id: string;
+            status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -379,8 +381,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            status: import(".prisma/client").$Enums.SalaryStatus;
-            paidDate: Date | null;
         }[];
         message?: undefined;
     } | {
