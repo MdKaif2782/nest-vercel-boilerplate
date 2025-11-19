@@ -19,6 +19,7 @@ const quotation_module_1 = require("../quotation/quotation.module");
 const order_module_1 = require("../order/order.module");
 const bill_module_1 = require("../bill/bill.module");
 const employee_module_1 = require("../employee/employee.module");
+const expense_module_1 = require("../expense/expense.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -36,7 +37,8 @@ exports.AppModule = AppModule = __decorate([
             quotation_module_1.QuotationModule,
             order_module_1.OrderModule,
             bill_module_1.BillModule,
-            employee_module_1.EmployeeModule
+            employee_module_1.EmployeeModule,
+            expense_module_1.ExpenseModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

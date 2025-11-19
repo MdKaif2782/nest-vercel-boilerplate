@@ -151,18 +151,7 @@ export class EmployeeService {
       },
     });
 
-    // Create expense record for the salary payment
-    await this.prisma.expense.create({
-      data: {
-        title: `Salary - ${salary.employee.name} - ${paySalaryDto.month}/${paySalaryDto.year}`,
-        description: `Salary payment for ${salary.employee.name}`,
-        amount: salary.netSalary,
-        category: 'OTHER',
-        expenseDate: paySalaryDto.paidDate,
-        recordedBy: paySalaryDto.employeeId,
-      },
-    });
-
+    //create the expense record
     return updatedSalary;
   }
 

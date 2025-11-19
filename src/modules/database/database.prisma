@@ -363,7 +363,11 @@ model Expense {
   amount      Float
   category    ExpenseCategory
   expenseDate DateTime    @default(now())
+  paymentMethod PaymentMethod
+  status      ExpenseStatus @default(PENDING)
+  notes       String?
   createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   
   // Relations
   recordedBy  String
@@ -380,6 +384,13 @@ enum ExpenseCategory {
   MAINTENANCE
   INTERNET
   OTHER
+  SALARY
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // Module 9: Employee & Salary Management
