@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateInvestorDto, UpdateInvestorDto } from './dto';
 import { DatabaseService } from '../database/database.service';
 
@@ -73,18 +73,18 @@ export class InvestorService {
             },
           },
         },
-        profitDistributions: {
-          include: {
-            bill: {
-              select: {
-                billNumber: true,
-                totalAmount: true,
-                billDate: true,
-              },
-            },
-          },
-          orderBy: { distributionDate: 'desc' },
-        },
+        // profitDistributions: {
+        //   include: {
+        //     bill: {
+        //       select: {
+        //         billNumber: true,
+        //         totalAmount: true,
+        //         billDate: true,
+        //       },
+        //     },
+        //   },
+        //   orderBy: { distributionDate: 'desc' },
+        // },
       },
     });
 
@@ -228,16 +228,6 @@ export class InvestorService {
             },
           },
         },
-        profitDistributions: {
-          include: {
-            bill: {
-              select: {
-                billNumber: true,
-                totalAmount: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -247,10 +237,7 @@ export class InvestorService {
         0,
       );
 
-      const totalProfit = investor.profitDistributions.reduce(
-        (sum, dist) => sum + dist.amount,
-        0,
-      );
+      const totalProfit = 0; // for now .. will update later
 
       const activeInvestments = investor.investments.filter(
         inv => !['CANCELLED', 'RECEIVED'].includes(inv.purchaseOrder.status),
@@ -283,4 +270,118 @@ export class InvestorService {
     const statistics = await this.getInvestorStatistics();
     return statistics.equityDistribution;
   }
+
+  async getDueSummary(investorId: string) {
+  const investor = await this.prisma.investor.findUnique({
+    where: { id: investorId },
+    include: {
+      investments: {
+        include: {
+          purchaseOrder: {
+            include: {
+              items: true,
+              inventory: {
+                include: {
+                  billItems: {
+                    include: {
+                      bill: {
+                        include: { payments: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+    },
+  });
+
+  if (!investor) throw new NotFoundException('Investor not found');
+
+  let totalProfitEarned = 0;
+  let payableNow = 0;
+
+  const poBreakdown = [];
+
+  for (const inv of investor.investments) {
+    const po = inv.purchaseOrder;
+    const profitPercent = inv.profitPercentage / 100;
+
+    let poRevenue = 0;
+    let poCollected = 0;
+
+    // Loop through inventory items from this PO
+    for (const inventory of po.inventory) {
+      for (const billItem of inventory.billItems) {
+        const bill = billItem.bill;
+
+        poRevenue += billItem.totalPrice;
+
+        // Add collected amount only
+        for (const p of bill.payments) {
+          poCollected += p.amount;
+        }
+      }
+    }
+
+    const poProfit = poRevenue * profitPercent;
+    const poPayableNow = poCollected * profitPercent;
+
+    totalProfitEarned += poProfit;
+    payableNow += poPayableNow;
+
+    poBreakdown.push({
+      poId: po.id,
+      poNumber: po.poNumber,
+      poRevenue,
+      poCollected,
+      profitPercentage: inv.profitPercentage,
+      profitEarned: poProfit,
+      payableNow: poPayableNow,
+    });
+  }
+
+  // Previous payments to investor
+  const investorPayments = await this.prisma.investorPayment.findMany({
+    where: { investorId },
+  });
+
+  const totalPaid = investorPayments.reduce((s, p) => s + p.amount, 0);
+
+  const due = totalProfitEarned - totalPaid;
+  payableNow = payableNow - totalPaid;
+
+  if (payableNow < 0) payableNow = 0;
+
+  return {
+    investorId,
+    totalProfitEarned,
+    totalPaid,
+    totalDue: due,
+    payableNow,
+    poBreakdown,
+  };
+}
+async payInvestor(investorId: string, amount: number, description?: string) {
+  if (amount <= 0) throw new BadRequestException('Invalid amount');
+
+  // Check payable_now
+  const summary = await this.getDueSummary(investorId);
+
+  if (amount > summary.payableNow) {
+    throw new BadRequestException(
+      `You can only pay up to ${summary.payableNow} BDT right now.`,
+    );
+  }
+
+  return this.prisma.investorPayment.create({
+    data: {
+      investorId,
+      amount,
+      description,
+    },
+  });
+}
 }

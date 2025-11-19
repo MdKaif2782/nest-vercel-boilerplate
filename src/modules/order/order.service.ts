@@ -108,12 +108,7 @@ export class OrderService {
           bills: {
             include: {
               items: true,
-              payments: true,
-              profitDistributions: {
-                include: {
-                  investor: true
-                }
-              }
+              payments: true
             }
           }
         },
@@ -175,12 +170,7 @@ export class OrderService {
                 inventory: true
               }
             },
-            payments: true,
-            profitDistributions: {
-              include: {
-                investor: true
-              }
-            }
+            payments: true
           }
         }
       }
@@ -281,11 +271,7 @@ export class OrderService {
     }, 0);
 
     // Calculate total profit distributed
-    const totalProfitDistributed = order.bills.reduce((sum, bill) => {
-      return sum + bill.profitDistributions.reduce(
-        (profitSum, distribution) => profitSum + distribution.amount, 0
-      );
-    }, 0);
+    const totalProfitDistributed = 0// for now will update later
 
     // Calculate completion percentage
     const completionPercentage = totalOrderedQuantity > 0 
@@ -397,15 +383,6 @@ export class OrderService {
 
     // Calculate actual distributed profits from profitDistributions
     const actualDistributions = new Map();
-    for (const bill of order.bills) {
-      for (const distribution of bill.profitDistributions) {
-        const investorId = distribution.investorId;
-        actualDistributions.set(
-          investorId, 
-          (actualDistributions.get(investorId) || 0) + distribution.amount
-        );
-      }
-    }
 
     // Update results with actual distributed profits
     for (const result of results) {

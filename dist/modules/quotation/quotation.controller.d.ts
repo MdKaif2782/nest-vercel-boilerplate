@@ -10,16 +10,16 @@ export declare class QuotationController {
         items: ({
             inventory: {
                 description: string;
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -43,16 +43,16 @@ export declare class QuotationController {
         data: ({
             items: ({
                 inventory: {
-                    productName: string;
                     productCode: string;
+                    productName: string;
                 };
             } & {
                 id: string;
                 quantity: number;
                 unitPrice: number;
-                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
+                taxPercentage: number | null;
                 mrp: number;
                 packagePrice: number;
                 quotationId: string;
@@ -87,16 +87,16 @@ export declare class QuotationController {
     getExpiredQuotations(): Promise<({
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -121,18 +121,18 @@ export declare class QuotationController {
             inventory: {
                 id: string;
                 description: string;
+                productCode: string;
                 productName: string;
                 quantity: number;
                 expectedSalePrice: number;
-                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -178,16 +178,16 @@ export declare class QuotationController {
     update(id: string, updateQuotationDto: UpdateQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -210,16 +210,16 @@ export declare class QuotationController {
     acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -251,16 +251,16 @@ export declare class QuotationController {
     updateStatus(id: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;

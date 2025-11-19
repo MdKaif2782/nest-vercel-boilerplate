@@ -78,18 +78,6 @@ let InvestorService = class InvestorService {
                         },
                     },
                 },
-                profitDistributions: {
-                    include: {
-                        bill: {
-                            select: {
-                                billNumber: true,
-                                totalAmount: true,
-                                billDate: true,
-                            },
-                        },
-                    },
-                    orderBy: { distributionDate: 'desc' },
-                },
             },
         });
         if (!investor) {
@@ -196,21 +184,11 @@ let InvestorService = class InvestorService {
                         },
                     },
                 },
-                profitDistributions: {
-                    include: {
-                        bill: {
-                            select: {
-                                billNumber: true,
-                                totalAmount: true,
-                            },
-                        },
-                    },
-                },
             },
         });
         const report = investors.map(investor => {
             const totalInvested = investor.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
-            const totalProfit = investor.profitDistributions.reduce((sum, dist) => sum + dist.amount, 0);
+            const totalProfit = 0;
             const activeInvestments = investor.investments.filter(inv => !['CANCELLED', 'RECEIVED'].includes(inv.purchaseOrder.status)).length;
             const completedInvestments = investor.investments.filter(inv => inv.purchaseOrder.status === 'RECEIVED').length;
             return {
@@ -233,6 +211,97 @@ let InvestorService = class InvestorService {
     async getEquityDistribution() {
         const statistics = await this.getInvestorStatistics();
         return statistics.equityDistribution;
+    }
+    async getDueSummary(investorId) {
+        const investor = await this.prisma.investor.findUnique({
+            where: { id: investorId },
+            include: {
+                investments: {
+                    include: {
+                        purchaseOrder: {
+                            include: {
+                                items: true,
+                                inventory: {
+                                    include: {
+                                        billItems: {
+                                            include: {
+                                                bill: {
+                                                    include: { payments: true },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+            },
+        });
+        if (!investor)
+            throw new common_1.NotFoundException('Investor not found');
+        let totalProfitEarned = 0;
+        let payableNow = 0;
+        const poBreakdown = [];
+        for (const inv of investor.investments) {
+            const po = inv.purchaseOrder;
+            const profitPercent = inv.profitPercentage / 100;
+            let poRevenue = 0;
+            let poCollected = 0;
+            for (const inventory of po.inventory) {
+                for (const billItem of inventory.billItems) {
+                    const bill = billItem.bill;
+                    poRevenue += billItem.totalPrice;
+                    for (const p of bill.payments) {
+                        poCollected += p.amount;
+                    }
+                }
+            }
+            const poProfit = poRevenue * profitPercent;
+            const poPayableNow = poCollected * profitPercent;
+            totalProfitEarned += poProfit;
+            payableNow += poPayableNow;
+            poBreakdown.push({
+                poId: po.id,
+                poNumber: po.poNumber,
+                poRevenue,
+                poCollected,
+                profitPercentage: inv.profitPercentage,
+                profitEarned: poProfit,
+                payableNow: poPayableNow,
+            });
+        }
+        const investorPayments = await this.prisma.investorPayment.findMany({
+            where: { investorId },
+        });
+        const totalPaid = investorPayments.reduce((s, p) => s + p.amount, 0);
+        const due = totalProfitEarned - totalPaid;
+        payableNow = payableNow - totalPaid;
+        if (payableNow < 0)
+            payableNow = 0;
+        return {
+            investorId,
+            totalProfitEarned,
+            totalPaid,
+            totalDue: due,
+            payableNow,
+            poBreakdown,
+        };
+    }
+    async payInvestor(investorId, amount, description) {
+        if (amount <= 0)
+            throw new common_1.BadRequestException('Invalid amount');
+        const summary = await this.getDueSummary(investorId);
+        if (amount > summary.payableNow) {
+            throw new common_1.BadRequestException(`You can only pay up to ${summary.payableNow} BDT right now.`);
+        }
+        return this.prisma.investorPayment.create({
+            data: {
+                investorId,
+                amount,
+                description,
+            },
+        });
     }
 };
 exports.InvestorService = InvestorService;

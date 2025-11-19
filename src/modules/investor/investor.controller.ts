@@ -58,6 +58,19 @@ export class InvestorController {
     return this.investorService.getInvestorById(id);
   }
 
+  @Get(':id/due-summary')
+  async getDueSummary(@Param('id') id: string) {
+    return this.investorService.getDueSummary(id);
+  }
+
+  @Post(':id/pay')
+  async payInvestor(
+    @Param('id') id: string,
+    @Body() body: { amount: number; description?: string },
+  ) {
+    return this.investorService.payInvestor(id, body.amount, body.description);
+  }
+
   @Put(':id')
   async updateInvestor(
     @Param('id') id: string,

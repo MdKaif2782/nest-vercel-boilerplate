@@ -277,7 +277,6 @@ model Bill {
   payments    Payment[]
   
   @@map("bills")
-  profitDistributions ProfitDistribution[]
 }
 
 model BillItem {
@@ -465,22 +464,18 @@ model Investor {
   
   // Relations
   investments PurchaseOrderInvestment[]
-  profitDistributions ProfitDistribution[]
-  
   @@map("investors")
+  investorPayments InvestorPayment[]
 }
 
-model ProfitDistribution {
-  id          String   @id @default(cuid())
-  amount      Float
-  distributionDate DateTime @default(now())
-  description String?
-  
-  // Relations
-  investorId  String
-  billId      String
-  investor    Investor @relation(fields: [investorId], references: [id])
-  bill        Bill     @relation(fields: [billId], references: [id])
-  
-  @@map("profit_distributions")
+model InvestorPayment {
+  id            String   @id @default(cuid())
+  investorId    String
+  amount        Float
+  paymentDate   DateTime @default(now())
+  description   String?
+
+  investor      Investor @relation(fields: [investorId], references: [id])
+
+  @@map("investor_payments")
 }

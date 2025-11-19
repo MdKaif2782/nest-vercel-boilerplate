@@ -4,16 +4,16 @@ export declare class InvestorService {
     private prisma;
     constructor(prisma: DatabaseService);
     createInvestor(createInvestorDto: CreateInvestorDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     getAllInvestors(page?: number, limit?: number, search?: string): Promise<{
         investors: ({
@@ -31,16 +31,16 @@ export declare class InvestorService {
                 investorId: string;
             })[];
         } & {
-            name: string;
             id: string;
+            name: string;
             email: string;
-            createdAt: Date;
             phone: string | null;
             address: string | null;
             taxId: string | null;
             bankAccount: string | null;
             bankName: string | null;
             isActive: boolean;
+            createdAt: Date;
         })[];
         pagination: {
             page: number;
@@ -66,67 +66,53 @@ export declare class InvestorService {
             purchaseOrderId: string;
             investorId: string;
         })[];
-        profitDistributions: ({
-            bill: {
-                totalAmount: number;
-                billNumber: string;
-                billDate: Date;
-            };
-        } & {
-            id: string;
-            investorId: string;
-            distributionDate: Date;
-            amount: number;
-            description: string | null;
-            billId: string;
-        })[];
     } & {
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     updateInvestor(id: string, updateInvestorDto: UpdateInvestorDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     deleteInvestor(id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     toggleInvestorStatus(id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string;
-        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
+        createdAt: Date;
     }>;
     getInvestorStatistics(): Promise<{
         summary: {
@@ -168,4 +154,19 @@ export declare class InvestorService {
         sharePercentage: number;
         amount: number;
     }[]>;
+    getDueSummary(investorId: string): Promise<{
+        investorId: string;
+        totalProfitEarned: number;
+        totalPaid: number;
+        totalDue: number;
+        payableNow: number;
+        poBreakdown: any[];
+    }>;
+    payInvestor(investorId: string, amount: number, description?: string): Promise<{
+        id: string;
+        investorId: string;
+        description: string | null;
+        amount: number;
+        paymentDate: Date;
+    }>;
 }

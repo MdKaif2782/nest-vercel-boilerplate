@@ -40,8 +40,8 @@ export declare class PurchaseOrderService {
             productName: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number;
             totalPrice: number;
+            taxPercentage: number;
         }[];
     } & {
         id: string;
@@ -90,8 +90,8 @@ export declare class PurchaseOrderService {
             productName: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number;
             totalPrice: number;
+            taxPercentage: number;
         }[];
     } & {
         id: string;
@@ -142,12 +142,12 @@ export declare class PurchaseOrderService {
             updatedAt: Date;
             purchaseOrderId: string;
             description: string | null;
-            productName: string;
-            quantity: number;
-            expectedSalePrice: number;
             productCode: string;
             barcode: string | null;
+            productName: string;
+            quantity: number;
             purchasePrice: number;
+            expectedSalePrice: number;
             minStockLevel: number | null;
             maxStockLevel: number | null;
         }[];
@@ -179,8 +179,8 @@ export declare class PurchaseOrderService {
             productName: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number;
             totalPrice: number;
+            taxPercentage: number;
         }[];
     } & {
         id: string;
@@ -235,8 +235,8 @@ export declare class PurchaseOrderService {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                taxPercentage: number;
                 totalPrice: number;
+                taxPercentage: number;
             }[];
         } & {
             id: string;
@@ -292,18 +292,18 @@ export declare class PurchaseOrderService {
         notes: string | null;
         purchaseOrderId: string;
         amount: number;
+        paymentDate: Date;
         paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
-        paymentDate: Date;
     })[]>;
     updatePayment(paymentId: string, updateData: Partial<CreatePurchaseOrderPaymentDto>): Promise<{
         id: string;
         notes: string | null;
         purchaseOrderId: string;
         amount: number;
+        paymentDate: Date;
         paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
         reference: string | null;
-        paymentDate: Date;
     }>;
     deletePayment(paymentId: string): Promise<{
         message: string;
@@ -323,9 +323,9 @@ export declare class PurchaseOrderService {
                 notes: string | null;
                 purchaseOrderId: string;
                 amount: number;
+                paymentDate: Date;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 reference: string | null;
-                paymentDate: Date;
             }[];
         } & {
             id: string;

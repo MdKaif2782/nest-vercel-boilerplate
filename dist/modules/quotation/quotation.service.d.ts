@@ -10,16 +10,16 @@ export declare class QuotationService {
         items: ({
             inventory: {
                 description: string;
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -43,16 +43,16 @@ export declare class QuotationService {
         data: ({
             items: ({
                 inventory: {
-                    productName: string;
                     productCode: string;
+                    productName: string;
                 };
             } & {
                 id: string;
                 quantity: number;
                 unitPrice: number;
-                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
+                taxPercentage: number | null;
                 mrp: number;
                 packagePrice: number;
                 quotationId: string;
@@ -89,18 +89,18 @@ export declare class QuotationService {
             inventory: {
                 id: string;
                 description: string;
+                productCode: string;
                 productName: string;
                 quantity: number;
                 expectedSalePrice: number;
-                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -146,16 +146,16 @@ export declare class QuotationService {
     update(id: string, updateQuotationDto: UpdateQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -178,16 +178,16 @@ export declare class QuotationService {
     acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -219,16 +219,16 @@ export declare class QuotationService {
     updateStatus(id: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'): Promise<{
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;
@@ -266,16 +266,16 @@ export declare class QuotationService {
     getExpiredQuotations(): Promise<({
         items: ({
             inventory: {
-                productName: string;
                 productCode: string;
+                productName: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
-            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
+            taxPercentage: number | null;
             mrp: number;
             packagePrice: number;
             quotationId: string;

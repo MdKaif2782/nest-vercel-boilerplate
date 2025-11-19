@@ -95,12 +95,7 @@ let OrderService = class OrderService {
                     bills: {
                         include: {
                             items: true,
-                            payments: true,
-                            profitDistributions: {
-                                include: {
-                                    investor: true
-                                }
-                            }
+                            payments: true
                         }
                     }
                 },
@@ -159,12 +154,7 @@ let OrderService = class OrderService {
                                 inventory: true
                             }
                         },
-                        payments: true,
-                        profitDistributions: {
-                            include: {
-                                investor: true
-                            }
-                        }
+                        payments: true
                     }
                 }
             }
@@ -237,9 +227,7 @@ let OrderService = class OrderService {
         const totalPaidAmount = order.bills.reduce((sum, bill) => {
             return sum + bill.payments.reduce((paymentSum, payment) => paymentSum + payment.amount, 0);
         }, 0);
-        const totalProfitDistributed = order.bills.reduce((sum, bill) => {
-            return sum + bill.profitDistributions.reduce((profitSum, distribution) => profitSum + distribution.amount, 0);
-        }, 0);
+        const totalProfitDistributed = 0;
         const completionPercentage = totalOrderedQuantity > 0
             ? (totalDeliveredQuantity / totalOrderedQuantity) * 100
             : 0;
@@ -323,12 +311,6 @@ let OrderService = class OrderService {
             });
         }
         const actualDistributions = new Map();
-        for (const bill of order.bills) {
-            for (const distribution of bill.profitDistributions) {
-                const investorId = distribution.investorId;
-                actualDistributions.set(investorId, (actualDistributions.get(investorId) || 0) + distribution.amount);
-            }
-        }
         for (const result of results) {
             result.actualDistributedProfit = Math.round((actualDistributions.get(result.investorId) || 0) * 100) / 100;
         }

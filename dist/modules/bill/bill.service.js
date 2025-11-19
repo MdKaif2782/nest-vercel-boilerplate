@@ -159,8 +159,7 @@ let BillService = class BillService {
                     },
                     _count: {
                         select: {
-                            payments: true,
-                            profitDistributions: true
+                            payments: true
                         }
                     }
                 },
