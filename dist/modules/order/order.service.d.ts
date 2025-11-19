@@ -124,6 +124,14 @@ export declare class OrderService {
                     description: string | null;
                     billId: string;
                 })[];
+                payments: {
+                    id: string;
+                    amount: number;
+                    billId: string;
+                    paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+                    reference: string | null;
+                    paymentDate: Date;
+                }[];
                 items: {
                     id: string;
                     billId: string;
@@ -133,14 +141,6 @@ export declare class OrderService {
                     inventoryId: string;
                     productDescription: string;
                     packagingDescription: string | null;
-                }[];
-                payments: {
-                    id: string;
-                    amount: number;
-                    billId: string;
-                    paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-                    reference: string | null;
-                    paymentDate: Date;
                 }[];
             } & {
                 id: string;
@@ -312,6 +312,14 @@ export declare class OrderService {
                 description: string | null;
                 billId: string;
             })[];
+            payments: {
+                id: string;
+                amount: number;
+                billId: string;
+                paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+                reference: string | null;
+                paymentDate: Date;
+            }[];
             items: ({
                 inventory: {
                     id: string;
@@ -338,14 +346,6 @@ export declare class OrderService {
                 productDescription: string;
                 packagingDescription: string | null;
             })[];
-            payments: {
-                id: string;
-                amount: number;
-                billId: string;
-                paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-                reference: string | null;
-                paymentDate: Date;
-            }[];
         } & {
             id: string;
             status: import(".prisma/client").$Enums.BillStatus;

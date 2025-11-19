@@ -203,6 +203,14 @@ export declare class BillController {
             name: string;
             email: string;
         };
+        payments: {
+            id: string;
+            amount: number;
+            billId: string;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
+            paymentDate: Date;
+        }[];
         items: ({
             inventory: {
                 productName: string;
@@ -218,14 +226,6 @@ export declare class BillController {
             productDescription: string;
             packagingDescription: string | null;
         })[];
-        payments: {
-            id: string;
-            amount: number;
-            billId: string;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
-            paymentDate: Date;
-        }[];
     } & {
         id: string;
         status: import(".prisma/client").$Enums.BillStatus;
@@ -246,6 +246,14 @@ export declare class BillController {
             id: string;
             email: string;
         };
+        payments: {
+            id: string;
+            amount: number;
+            billId: string;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
+            paymentDate: Date;
+        }[];
         items: ({
             inventory: {
                 id: string;
@@ -263,14 +271,6 @@ export declare class BillController {
             productDescription: string;
             packagingDescription: string | null;
         })[];
-        payments: {
-            id: string;
-            amount: number;
-            billId: string;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
-            paymentDate: Date;
-        }[];
         buyerPO: {
             quotation: {
                 items: ({
