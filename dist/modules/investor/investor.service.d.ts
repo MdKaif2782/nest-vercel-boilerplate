@@ -5,16 +5,16 @@ export declare class InvestorService {
     private prisma;
     constructor(prisma: DatabaseService);
     createInvestor(createInvestorDto: CreateInvestorDto): Promise<{
-        id: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
-        createdAt: Date;
     }>;
     getAllInvestors(page?: number, limit?: number, search?: string): Promise<{
         investors: ({
@@ -32,16 +32,16 @@ export declare class InvestorService {
                 investorId: string;
             })[];
         } & {
-            id: string;
             name: string;
+            id: string;
             email: string;
+            createdAt: Date;
             phone: string | null;
             address: string | null;
             taxId: string | null;
             bankAccount: string | null;
             bankName: string | null;
             isActive: boolean;
-            createdAt: Date;
         })[];
         pagination: {
             page: number;
@@ -68,52 +68,52 @@ export declare class InvestorService {
             investorId: string;
         })[];
     } & {
-        id: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
-        createdAt: Date;
     }>;
     updateInvestor(id: string, updateInvestorDto: UpdateInvestorDto): Promise<{
-        id: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
-        createdAt: Date;
     }>;
     deleteInvestor(id: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
-        createdAt: Date;
     }>;
     toggleInvestorStatus(id: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         email: string;
+        createdAt: Date;
         phone: string | null;
         address: string | null;
         taxId: string | null;
         bankAccount: string | null;
         bankName: string | null;
         isActive: boolean;
-        createdAt: Date;
     }>;
     getInvestorStatistics(): Promise<{
         summary: {

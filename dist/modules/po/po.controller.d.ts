@@ -42,8 +42,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;
@@ -101,8 +101,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;
@@ -144,10 +144,10 @@ export declare class PurchaseOrderController {
                 updatedAt: Date;
                 purchaseOrderId: string;
                 description: string | null;
-                productCode: string;
-                barcode: string | null;
                 productName: string;
                 quantity: number;
+                productCode: string;
+                barcode: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
@@ -181,8 +181,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;
@@ -235,8 +235,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;
@@ -320,8 +320,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;
@@ -384,8 +384,8 @@ export declare class PurchaseOrderController {
                 productName: string;
                 quantity: number;
                 unitPrice: number;
-                totalPrice: number;
                 taxPercentage: number;
+                totalPrice: number;
             }[];
         } & {
             id: string;

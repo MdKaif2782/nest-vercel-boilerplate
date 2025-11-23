@@ -13,10 +13,10 @@ export declare class OrderService {
                     updatedAt: Date;
                     purchaseOrderId: string;
                     description: string | null;
-                    productCode: string;
-                    barcode: string | null;
                     productName: string;
                     quantity: number;
+                    productCode: string;
+                    barcode: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -26,12 +26,12 @@ export declare class OrderService {
                 id: string;
                 quantity: number;
                 unitPrice: number;
+                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
-                taxPercentage: number | null;
+                quotationId: string;
                 mrp: number;
                 packagePrice: number;
-                quotationId: string;
             })[];
         } & {
             id: string;
@@ -39,6 +39,7 @@ export declare class OrderService {
             status: import(".prisma/client").$Enums.QuotationStatus;
             totalAmount: number;
             taxAmount: number;
+            quotationNumber: string;
             companyName: string;
             companyAddress: string;
             companyContact: string | null;
@@ -46,7 +47,6 @@ export declare class OrderService {
             deliveryDays: number | null;
             moneyInWords: string | null;
             validUntil: Date | null;
-            quotationNumber: string;
         };
     } & {
         id: string;
@@ -67,10 +67,10 @@ export declare class OrderService {
                         updatedAt: Date;
                         purchaseOrderId: string;
                         description: string | null;
-                        productCode: string;
-                        barcode: string | null;
                         productName: string;
                         quantity: number;
+                        productCode: string;
+                        barcode: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
@@ -80,12 +80,12 @@ export declare class OrderService {
                     id: string;
                     quantity: number;
                     unitPrice: number;
+                    taxPercentage: number | null;
                     totalPrice: number;
                     inventoryId: string;
-                    taxPercentage: number | null;
+                    quotationId: string;
                     mrp: number;
                     packagePrice: number;
-                    quotationId: string;
                 })[];
             } & {
                 id: string;
@@ -93,6 +93,7 @@ export declare class OrderService {
                 status: import(".prisma/client").$Enums.QuotationStatus;
                 totalAmount: number;
                 taxAmount: number;
+                quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
@@ -100,26 +101,25 @@ export declare class OrderService {
                 deliveryDays: number | null;
                 moneyInWords: string | null;
                 validUntil: Date | null;
-                quotationNumber: string;
             };
             bills: ({
                 items: {
                     id: string;
                     quantity: number;
-                    productDescription: string;
-                    packagingDescription: string | null;
                     unitPrice: number;
                     totalPrice: number;
+                    productDescription: string;
+                    packagingDescription: string | null;
                     billId: string;
                     inventoryId: string;
                 }[];
                 payments: {
                     id: string;
                     amount: number;
-                    billId: string;
                     paymentDate: Date;
                     paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                     reference: string | null;
+                    billId: string;
                 }[];
             } & {
                 id: string;
@@ -143,10 +143,10 @@ export declare class OrderService {
                         updatedAt: Date;
                         purchaseOrderId: string;
                         description: string | null;
-                        productCode: string;
-                        barcode: string | null;
                         productName: string;
                         quantity: number;
+                        productCode: string;
+                        barcode: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
@@ -234,10 +234,10 @@ export declare class OrderService {
                     updatedAt: Date;
                     purchaseOrderId: string;
                     description: string | null;
-                    productCode: string;
-                    barcode: string | null;
                     productName: string;
                     quantity: number;
+                    productCode: string;
+                    barcode: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -247,12 +247,12 @@ export declare class OrderService {
                 id: string;
                 quantity: number;
                 unitPrice: number;
+                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
-                taxPercentage: number | null;
+                quotationId: string;
                 mrp: number;
                 packagePrice: number;
-                quotationId: string;
             })[];
         } & {
             id: string;
@@ -260,6 +260,7 @@ export declare class OrderService {
             status: import(".prisma/client").$Enums.QuotationStatus;
             totalAmount: number;
             taxAmount: number;
+            quotationNumber: string;
             companyName: string;
             companyAddress: string;
             companyContact: string | null;
@@ -267,7 +268,6 @@ export declare class OrderService {
             deliveryDays: number | null;
             moneyInWords: string | null;
             validUntil: Date | null;
-            quotationNumber: string;
         };
         bills: ({
             items: ({
@@ -277,10 +277,10 @@ export declare class OrderService {
                     updatedAt: Date;
                     purchaseOrderId: string;
                     description: string | null;
-                    productCode: string;
-                    barcode: string | null;
                     productName: string;
                     quantity: number;
+                    productCode: string;
+                    barcode: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -289,20 +289,20 @@ export declare class OrderService {
             } & {
                 id: string;
                 quantity: number;
-                productDescription: string;
-                packagingDescription: string | null;
                 unitPrice: number;
                 totalPrice: number;
+                productDescription: string;
+                packagingDescription: string | null;
                 billId: string;
                 inventoryId: string;
             })[];
             payments: {
                 id: string;
                 amount: number;
-                billId: string;
                 paymentDate: Date;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 reference: string | null;
+                billId: string;
             }[];
         } & {
             id: string;
@@ -326,10 +326,10 @@ export declare class OrderService {
                     updatedAt: Date;
                     purchaseOrderId: string;
                     description: string | null;
-                    productCode: string;
-                    barcode: string | null;
                     productName: string;
                     quantity: number;
+                    productCode: string;
+                    barcode: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -369,10 +369,10 @@ export declare class OrderService {
                     updatedAt: Date;
                     purchaseOrderId: string;
                     description: string | null;
-                    productCode: string;
-                    barcode: string | null;
                     productName: string;
                     quantity: number;
+                    productCode: string;
+                    barcode: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -382,12 +382,12 @@ export declare class OrderService {
                 id: string;
                 quantity: number;
                 unitPrice: number;
+                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
-                taxPercentage: number | null;
+                quotationId: string;
                 mrp: number;
                 packagePrice: number;
-                quotationId: string;
             })[];
         } & {
             id: string;
@@ -395,6 +395,7 @@ export declare class OrderService {
             status: import(".prisma/client").$Enums.QuotationStatus;
             totalAmount: number;
             taxAmount: number;
+            quotationNumber: string;
             companyName: string;
             companyAddress: string;
             companyContact: string | null;
@@ -402,7 +403,6 @@ export declare class OrderService {
             deliveryDays: number | null;
             moneyInWords: string | null;
             validUntil: Date | null;
-            quotationNumber: string;
         };
     } & {
         id: string;

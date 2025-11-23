@@ -10,19 +10,19 @@ export declare class QuotationService {
         items: ({
             inventory: {
                 description: string;
-                productCode: string;
                 productName: string;
+                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
     } & {
         id: string;
@@ -30,6 +30,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -37,25 +38,24 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     findAll(searchDto: QuotationSearchDto): Promise<{
         data: ({
             items: ({
                 inventory: {
-                    productCode: string;
                     productName: string;
+                    productCode: string;
                 };
             } & {
                 id: string;
                 quantity: number;
                 unitPrice: number;
+                taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
-                taxPercentage: number | null;
+                quotationId: string;
                 mrp: number;
                 packagePrice: number;
-                quotationId: string;
             })[];
             buyerPO: {
                 id: string;
@@ -68,6 +68,7 @@ export declare class QuotationService {
             status: import(".prisma/client").$Enums.QuotationStatus;
             totalAmount: number;
             taxAmount: number;
+            quotationNumber: string;
             companyName: string;
             companyAddress: string;
             companyContact: string | null;
@@ -75,7 +76,6 @@ export declare class QuotationService {
             deliveryDays: number | null;
             moneyInWords: string | null;
             validUntil: Date | null;
-            quotationNumber: string;
         })[];
         meta: {
             page: number;
@@ -89,21 +89,21 @@ export declare class QuotationService {
             inventory: {
                 id: string;
                 description: string;
-                productCode: string;
                 productName: string;
                 quantity: number;
+                productCode: string;
                 expectedSalePrice: number;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
         buyerPO: {
             bills: {
@@ -134,6 +134,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -141,24 +142,23 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     update(id: string, updateQuotationDto: UpdateQuotationDto): Promise<{
         items: ({
             inventory: {
-                productCode: string;
                 productName: string;
+                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
     } & {
         id: string;
@@ -166,6 +166,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -173,24 +174,23 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto): Promise<{
         items: ({
             inventory: {
-                productCode: string;
                 productName: string;
+                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
         buyerPO: {
             id: string;
@@ -207,6 +207,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -214,24 +215,23 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     updateStatus(id: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'): Promise<{
         items: ({
             inventory: {
-                productCode: string;
                 productName: string;
+                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
     } & {
         id: string;
@@ -239,6 +239,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -246,7 +247,6 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     remove(id: string): Promise<{
         id: string;
@@ -254,6 +254,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -261,24 +262,23 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     }>;
     getExpiredQuotations(): Promise<({
         items: ({
             inventory: {
-                productCode: string;
                 productName: string;
+                productCode: string;
             };
         } & {
             id: string;
             quantity: number;
             unitPrice: number;
+            taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
-            taxPercentage: number | null;
+            quotationId: string;
             mrp: number;
             packagePrice: number;
-            quotationId: string;
         })[];
     } & {
         id: string;
@@ -286,6 +286,7 @@ export declare class QuotationService {
         status: import(".prisma/client").$Enums.QuotationStatus;
         totalAmount: number;
         taxAmount: number;
+        quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
@@ -293,6 +294,5 @@ export declare class QuotationService {
         deliveryDays: number | null;
         moneyInWords: string | null;
         validUntil: Date | null;
-        quotationNumber: string;
     })[]>;
 }
