@@ -226,82 +226,233 @@ let InvestorService = class InvestorService {
                                         billItems: {
                                             include: {
                                                 bill: {
-                                                    include: { payments: true },
+                                                    include: {
+                                                        payments: true,
+                                                        buyerPO: {
+                                                            include: {
+                                                                quotation: {
+                                                                    select: {
+                                                                        companyName: true,
+                                                                        companyContact: true
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 },
                                             },
                                         },
+                                        retailItems: {
+                                            include: {
+                                                retailSale: true
+                                            }
+                                        }
                                     },
                                 },
                             },
                         },
                     },
+                },
+                investorPayments: {
+                    orderBy: { paymentDate: 'desc' },
+                    include: {}
                 }
             },
         });
         if (!investor)
             throw new common_1.NotFoundException('Investor not found');
+        const investorInfo = {
+            id: investor.id,
+            name: investor.name,
+            email: investor.email,
+            phone: investor.phone,
+            taxId: investor.taxId,
+            bankAccount: investor.bankAccount,
+            bankName: investor.bankName,
+            joinDate: investor.createdAt,
+            status: investor.isActive ? 'Active' : 'Inactive'
+        };
+        let totalInvestment = 0;
+        let totalRevenue = 0;
+        let totalCollected = 0;
         let totalProfitEarned = 0;
         let payableNow = 0;
-        const poBreakdown = [];
+        const investmentBreakdown = [];
+        const productSales = [];
         for (const inv of investor.investments) {
             const po = inv.purchaseOrder;
             const profitPercent = inv.profitPercentage / 100;
+            totalInvestment += inv.investmentAmount;
             let poRevenue = 0;
             let poCollected = 0;
+            let poCost = 0;
+            poCost = po.items.reduce((sum, item) => sum + item.totalPrice, 0);
+            const poProducts = new Map();
             for (const inventory of po.inventory) {
                 for (const billItem of inventory.billItems) {
                     const bill = billItem.bill;
                     poRevenue += billItem.totalPrice;
-                    for (const p of bill.payments) {
-                        poCollected += p.amount;
+                    const productKey = `${inventory.productName}-${inventory.productCode}`;
+                    if (!poProducts.has(productKey)) {
+                        poProducts.set(productKey, {
+                            productName: inventory.productName,
+                            productCode: inventory.productCode,
+                            purchasePrice: inventory.purchasePrice,
+                            expectedSalePrice: inventory.expectedSalePrice,
+                            totalSold: 0,
+                            totalRevenue: 0,
+                            customers: new Set()
+                        });
                     }
+                    const product = poProducts.get(productKey);
+                    product.totalSold += billItem.quantity;
+                    product.totalRevenue += billItem.totalPrice;
+                    product.customers.add(bill.buyerPO?.quotation?.companyName || 'Unknown Customer');
+                    const billCollected = bill.payments.reduce((sum, p) => sum + p.amount, 0);
+                    poCollected += (billItem.totalPrice / bill.totalAmount) * billCollected;
+                }
+                for (const retailItem of inventory.retailItems) {
+                    const retailSale = retailItem.retailSale;
+                    poRevenue += retailItem.totalPrice;
+                    poCollected += retailItem.totalPrice;
+                    const productKey = `${inventory.productName}-${inventory.productCode}`;
+                    if (!poProducts.has(productKey)) {
+                        poProducts.set(productKey, {
+                            productName: inventory.productName,
+                            productCode: inventory.productCode,
+                            purchasePrice: inventory.purchasePrice,
+                            expectedSalePrice: inventory.expectedSalePrice,
+                            totalSold: 0,
+                            totalRevenue: 0,
+                            customers: new Set()
+                        });
+                    }
+                    const product = poProducts.get(productKey);
+                    product.totalSold += retailItem.quantity;
+                    product.totalRevenue += retailItem.totalPrice;
+                    product.customers.add('Retail Customer');
                 }
             }
             const poProfit = poRevenue * profitPercent;
             const poPayableNow = poCollected * profitPercent;
+            totalRevenue += poRevenue;
+            totalCollected += poCollected;
             totalProfitEarned += poProfit;
             payableNow += poPayableNow;
-            poBreakdown.push({
+            poProducts.forEach(product => {
+                productSales.push({
+                    poId: po.id,
+                    poNumber: po.poNumber,
+                    ...product,
+                    customers: Array.from(product.customers)
+                });
+            });
+            investmentBreakdown.push({
+                investmentId: inv.id,
                 poId: po.id,
                 poNumber: po.poNumber,
+                vendorName: po.vendorName,
+                investmentAmount: inv.investmentAmount,
+                profitPercentage: inv.profitPercentage,
+                poStatus: po.status,
+                orderDate: po.createdAt,
+                receivedDate: po.receivedAt,
+                poCost,
                 poRevenue,
                 poCollected,
-                profitPercentage: inv.profitPercentage,
+                poProfit,
+                poPayableNow,
+                roi: ((poRevenue - poCost) / poCost) * 100,
                 profitEarned: poProfit,
                 payableNow: poPayableNow,
+                products: po.items.map(item => ({
+                    productName: item.productName,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    totalPrice: item.totalPrice
+                }))
             });
         }
-        const investorPayments = await this.prisma.investorPayment.findMany({
-            where: { investorId },
-        });
-        const totalPaid = investorPayments.reduce((s, p) => s + p.amount, 0);
-        const due = totalProfitEarned - totalPaid;
-        payableNow = payableNow - totalPaid;
-        if (payableNow < 0)
-            payableNow = 0;
+        const paymentHistory = investor.investorPayments.map(payment => ({
+            id: payment.id,
+            amount: payment.amount,
+            paymentDate: payment.paymentDate,
+            description: payment.description,
+            paymentMethod: payment.paymentMethod,
+            reference: payment.reference
+        }));
+        const totalPaid = paymentHistory.reduce((sum, p) => sum + p.amount, 0);
+        const totalDue = totalProfitEarned - totalPaid;
+        payableNow = Math.max(0, payableNow - totalPaid);
+        const overallROI = totalInvestment > 0 ? ((totalProfitEarned - totalInvestment) / totalInvestment) * 100 : 0;
+        const collectionEfficiency = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0;
         return {
-            investorId,
-            totalProfitEarned,
-            totalPaid,
-            totalDue: due,
-            payableNow,
-            poBreakdown,
+            investor: investorInfo,
+            summary: {
+                totalInvestment,
+                totalRevenue,
+                totalCollected,
+                totalProfitEarned,
+                totalPaid,
+                totalDue,
+                payableNow,
+                overallROI: Number(overallROI.toFixed(2)),
+                collectionEfficiency: Number(collectionEfficiency.toFixed(2)),
+                activeInvestments: investor.investments.filter(inv => ['ORDERED', 'SHIPPED', 'RECEIVED'].includes(inv.purchaseOrder.status)).length
+            },
+            investmentBreakdown,
+            productSales,
+            paymentHistory,
+            recentActivity: [
+                ...investmentBreakdown
+                    .filter(inv => inv.poStatus === 'RECEIVED')
+                    .map(inv => ({
+                    type: 'PO_RECEIVED',
+                    date: inv.receivedDate,
+                    description: `Purchase Order ${inv.poNumber} received from ${inv.vendorName}`,
+                    amount: inv.investmentAmount
+                })),
+                ...paymentHistory.map(payment => ({
+                    type: 'PAYMENT_RECEIVED',
+                    date: payment.paymentDate,
+                    description: `Payment received - ${payment.description || 'Investor Payment'}`,
+                    amount: payment.amount,
+                    method: payment.paymentMethod
+                }))
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10)
         };
     }
-    async payInvestor(investorId, amount, description) {
+    async payInvestor(investorId, amount, description, paymentMethod, reference) {
         if (amount <= 0)
             throw new common_1.BadRequestException('Invalid amount');
+        const investor = await this.prisma.investor.findUnique({
+            where: { id: investorId }
+        });
+        if (!investor)
+            throw new common_1.NotFoundException('Investor not found');
         const summary = await this.getDueSummary(investorId);
-        if (amount > summary.payableNow) {
-            throw new common_1.BadRequestException(`You can only pay up to ${summary.payableNow} BDT right now.`);
+        if (amount > summary.summary.payableNow) {
+            throw new common_1.BadRequestException(`You can only pay up to ${summary.summary.payableNow} BDT right now. Available from collected sales.`);
         }
-        return this.prisma.investorPayment.create({
+        const payment = await this.prisma.investorPayment.create({
             data: {
                 investorId,
                 amount,
-                description,
+                description: description || `Payment for profits from sales`,
+                paymentMethod,
+                reference,
             },
         });
+        return {
+            success: true,
+            payment,
+            newBalance: {
+                previousDue: summary.summary.totalDue,
+                newDue: summary.summary.totalDue - amount,
+                remainingPayable: summary.summary.payableNow - amount
+            },
+            investor: summary.investor
+        };
     }
 };
 exports.InvestorService = InvestorService;

@@ -9,20 +9,6 @@ export declare class BillController {
             name: string;
             email: string;
         };
-        buyerPO: {
-            quotation: {
-                quotationNumber: string;
-                companyName: string;
-            };
-        } & {
-            id: string;
-            poNumber: string;
-            poDate: Date;
-            pdfUrl: string | null;
-            externalUrl: string | null;
-            createdAt: Date;
-            quotationId: string;
-        };
         items: ({
             inventory: {
                 productCode: string;
@@ -30,27 +16,41 @@ export declare class BillController {
             };
         } & {
             id: string;
+            quantity: number;
             productDescription: string;
             packagingDescription: string | null;
-            quantity: number;
             unitPrice: number;
             totalPrice: number;
-            inventoryId: string;
             billId: string;
+            inventoryId: string;
         })[];
+        buyerPO: {
+            quotation: {
+                companyName: string;
+                quotationNumber: string;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            poNumber: string;
+            poDate: Date;
+            pdfUrl: string | null;
+            externalUrl: string | null;
+            quotationId: string;
+        };
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.BillStatus;
+        totalAmount: number;
+        taxAmount: number;
+        dueAmount: number;
+        createdBy: string;
         billNumber: string;
         billDate: Date;
         vatRegNo: string;
         code: string;
         vendorNo: string;
-        totalAmount: number;
-        taxAmount: number;
-        dueAmount: number;
-        status: import(".prisma/client").$Enums.BillStatus;
         buyerPOId: string;
-        createdBy: string;
     }>;
     findAll(searchDto: BillSearchDto): Promise<{
         data: ({
@@ -58,45 +58,45 @@ export declare class BillController {
                 name: string;
                 email: string;
             };
+            _count: {
+                payments: number;
+            };
+            payments: {
+                id: string;
+                amount: number;
+                billId: string;
+                paymentDate: Date;
+                paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+                reference: string | null;
+            }[];
             buyerPO: {
                 quotation: {
-                    quotationNumber: string;
                     companyName: string;
                     companyContact: string;
+                    quotationNumber: string;
                 };
             } & {
                 id: string;
+                createdAt: Date;
                 poNumber: string;
                 poDate: Date;
                 pdfUrl: string | null;
                 externalUrl: string | null;
-                createdAt: Date;
                 quotationId: string;
-            };
-            payments: {
-                id: string;
-                billId: string;
-                paymentDate: Date;
-                amount: number;
-                paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-                reference: string | null;
-            }[];
-            _count: {
-                payments: number;
             };
         } & {
             id: string;
+            status: import(".prisma/client").$Enums.BillStatus;
+            totalAmount: number;
+            taxAmount: number;
+            dueAmount: number;
+            createdBy: string;
             billNumber: string;
             billDate: Date;
             vatRegNo: string;
             code: string;
             vendorNo: string;
-            totalAmount: number;
-            taxAmount: number;
-            dueAmount: number;
-            status: import(".prisma/client").$Enums.BillStatus;
             buyerPOId: string;
-            createdBy: string;
         })[];
         meta: {
             page: number;
@@ -116,40 +116,40 @@ export declare class BillController {
         collectionRate: number;
     }>;
     getRecentBills(limit: number): Promise<({
+        payments: {
+            id: string;
+            amount: number;
+            billId: string;
+            paymentDate: Date;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
+        }[];
         buyerPO: {
             quotation: {
                 companyName: string;
             };
         } & {
             id: string;
+            createdAt: Date;
             poNumber: string;
             poDate: Date;
             pdfUrl: string | null;
             externalUrl: string | null;
-            createdAt: Date;
             quotationId: string;
         };
-        payments: {
-            id: string;
-            billId: string;
-            paymentDate: Date;
-            amount: number;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
-        }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.BillStatus;
+        totalAmount: number;
+        taxAmount: number;
+        dueAmount: number;
+        createdBy: string;
         billNumber: string;
         billDate: Date;
         vatRegNo: string;
         code: string;
         vendorNo: string;
-        totalAmount: number;
-        taxAmount: number;
-        dueAmount: number;
-        status: import(".prisma/client").$Enums.BillStatus;
         buyerPOId: string;
-        createdBy: string;
     })[]>;
     getAvailableBuyerPOs(): Promise<{
         remainingAmount: number;
@@ -160,28 +160,28 @@ export declare class BillController {
                 inventory: {
                     id: string;
                     createdAt: Date;
-                    quantity: number;
+                    updatedAt: Date;
+                    purchaseOrderId: string;
+                    description: string | null;
                     productCode: string;
                     barcode: string | null;
                     productName: string;
-                    description: string | null;
+                    quantity: number;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
                     maxStockLevel: number | null;
-                    updatedAt: Date;
-                    purchaseOrderId: string;
                 };
             } & {
                 id: string;
-                quotationId: string;
                 quantity: number;
                 unitPrice: number;
                 totalPrice: number;
                 inventoryId: string;
+                taxPercentage: number | null;
                 mrp: number;
                 packagePrice: number;
-                taxPercentage: number | null;
+                quotationId: string;
             })[];
             companyName: string;
             companyContact: string;
@@ -190,11 +190,11 @@ export declare class BillController {
             totalAmount: number;
         }[];
         id: string;
+        createdAt: Date;
         poNumber: string;
         poDate: Date;
         pdfUrl: string | null;
         externalUrl: string | null;
-        createdAt: Date;
         quotationId: string;
     }[]>;
     getBillsByBuyerPO(buyerPOId: string): Promise<({
@@ -209,78 +209,102 @@ export declare class BillController {
             };
         } & {
             id: string;
+            quantity: number;
             productDescription: string;
             packagingDescription: string | null;
-            quantity: number;
             unitPrice: number;
             totalPrice: number;
-            inventoryId: string;
             billId: string;
+            inventoryId: string;
         })[];
         payments: {
             id: string;
+            amount: number;
             billId: string;
             paymentDate: Date;
-            amount: number;
             paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
             reference: string | null;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.BillStatus;
+        totalAmount: number;
+        taxAmount: number;
+        dueAmount: number;
+        createdBy: string;
         billNumber: string;
         billDate: Date;
         vatRegNo: string;
         code: string;
         vendorNo: string;
-        totalAmount: number;
-        taxAmount: number;
-        dueAmount: number;
-        status: import(".prisma/client").$Enums.BillStatus;
         buyerPOId: string;
-        createdBy: string;
     })[]>;
     findOne(id: string): Promise<{
         user: {
-            id: string;
             name: string;
+            id: string;
             email: string;
         };
+        items: ({
+            inventory: {
+                id: string;
+                description: string;
+                productCode: string;
+                productName: string;
+            };
+        } & {
+            id: string;
+            quantity: number;
+            productDescription: string;
+            packagingDescription: string | null;
+            unitPrice: number;
+            totalPrice: number;
+            billId: string;
+            inventoryId: string;
+        })[];
+        payments: {
+            id: string;
+            amount: number;
+            billId: string;
+            paymentDate: Date;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string | null;
+        }[];
         buyerPO: {
             quotation: {
                 items: ({
                     inventory: {
                         id: string;
                         createdAt: Date;
-                        quantity: number;
+                        updatedAt: Date;
+                        purchaseOrderId: string;
+                        description: string | null;
                         productCode: string;
                         barcode: string | null;
                         productName: string;
-                        description: string | null;
+                        quantity: number;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
                         maxStockLevel: number | null;
-                        updatedAt: Date;
-                        purchaseOrderId: string;
                     };
                 } & {
                     id: string;
-                    quotationId: string;
                     quantity: number;
                     unitPrice: number;
                     totalPrice: number;
                     inventoryId: string;
+                    taxPercentage: number | null;
                     mrp: number;
                     packagePrice: number;
-                    taxPercentage: number | null;
+                    quotationId: string;
                 })[];
             } & {
                 id: string;
+                createdAt: Date;
+                status: import(".prisma/client").$Enums.QuotationStatus;
                 totalAmount: number;
                 taxAmount: number;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                createdAt: Date;
-                quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
@@ -288,76 +312,52 @@ export declare class BillController {
                 deliveryDays: number | null;
                 moneyInWords: string | null;
                 validUntil: Date | null;
+                quotationNumber: string;
             };
         } & {
             id: string;
+            createdAt: Date;
             poNumber: string;
             poDate: Date;
             pdfUrl: string | null;
             externalUrl: string | null;
-            createdAt: Date;
             quotationId: string;
         };
-        items: ({
-            inventory: {
-                id: string;
-                productCode: string;
-                productName: string;
-                description: string;
-            };
-        } & {
-            id: string;
-            productDescription: string;
-            packagingDescription: string | null;
-            quantity: number;
-            unitPrice: number;
-            totalPrice: number;
-            inventoryId: string;
-            billId: string;
-        })[];
-        payments: {
-            id: string;
-            billId: string;
-            paymentDate: Date;
-            amount: number;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            reference: string | null;
-        }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.BillStatus;
+        totalAmount: number;
+        taxAmount: number;
+        dueAmount: number;
+        createdBy: string;
         billNumber: string;
         billDate: Date;
         vatRegNo: string;
         code: string;
         vendorNo: string;
-        totalAmount: number;
-        taxAmount: number;
-        dueAmount: number;
-        status: import(".prisma/client").$Enums.BillStatus;
         buyerPOId: string;
-        createdBy: string;
     }>;
     addPayment(id: string, addPaymentDto: AddPaymentDto): Promise<{
         payments: {
             id: string;
+            amount: number;
             billId: string;
             paymentDate: Date;
-            amount: number;
             paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
             reference: string | null;
         }[];
     } & {
         id: string;
+        status: import(".prisma/client").$Enums.BillStatus;
+        totalAmount: number;
+        taxAmount: number;
+        dueAmount: number;
+        createdBy: string;
         billNumber: string;
         billDate: Date;
         vatRegNo: string;
         code: string;
         vendorNo: string;
-        totalAmount: number;
-        taxAmount: number;
-        dueAmount: number;
-        status: import(".prisma/client").$Enums.BillStatus;
         buyerPOId: string;
-        createdBy: string;
     }>;
 }

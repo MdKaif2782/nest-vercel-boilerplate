@@ -474,7 +474,8 @@ model InvestorPayment {
   amount        Float
   paymentDate   DateTime @default(now())
   description   String?
-
+  paymentMethod PaymentMethod? // Add this field
+  reference     String?  // Add reference number
   investor      Investor @relation(fields: [investorId], references: [id])
 
   @@map("investor_payments")

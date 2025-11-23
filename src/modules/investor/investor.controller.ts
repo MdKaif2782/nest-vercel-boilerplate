@@ -18,6 +18,7 @@ import {
   UpdateInvestorDto,
   InvestorQueryDto,
 } from './dto';
+import { PaymentMethod } from '@prisma/client';
 
 @Controller('investors')
 export class InvestorController {
@@ -59,17 +60,28 @@ export class InvestorController {
   }
 
   @Get(':id/due-summary')
-  async getDueSummary(@Param('id') id: string) {
-    return this.investorService.getDueSummary(id);
-  }
+async getDueSummary(@Param('id') id: string) {
+  return this.investorService.getDueSummary(id);
+}
 
-  @Post(':id/pay')
-  async payInvestor(
-    @Param('id') id: string,
-    @Body() body: { amount: number; description?: string },
-  ) {
-    return this.investorService.payInvestor(id, body.amount, body.description);
-  }
+@Post(':id/pay')
+async payInvestor(
+  @Param('id') id: string,
+  @Body() body: { 
+    amount: number; 
+    description?: string;
+    paymentMethod?: PaymentMethod;
+    reference?: string;
+  },
+) {
+  return this.investorService.payInvestor(
+    id, 
+    body.amount, 
+    body.description,
+    body.paymentMethod,
+    body.reference
+  );
+}
 
   @Put(':id')
   async updateInvestor(

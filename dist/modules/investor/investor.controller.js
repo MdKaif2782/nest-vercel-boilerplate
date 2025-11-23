@@ -42,7 +42,7 @@ let InvestorController = class InvestorController {
         return this.investorService.getDueSummary(id);
     }
     async payInvestor(id, body) {
-        return this.investorService.payInvestor(id, body.amount, body.description);
+        return this.investorService.payInvestor(id, body.amount, body.description, body.paymentMethod, body.reference);
     }
     async updateInvestor(id, updateInvestorDto) {
         return this.investorService.updateInvestor(id, updateInvestorDto);

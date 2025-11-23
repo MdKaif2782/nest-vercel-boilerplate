@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateInvestorDto, UpdateInvestorDto } from './dto';
 import { DatabaseService } from '../database/database.service';
+import { PaymentMethod } from '@prisma/client';
 
 @Injectable()
 export class InvestorService {
@@ -270,8 +271,7 @@ export class InvestorService {
     const statistics = await this.getInvestorStatistics();
     return statistics.equityDistribution;
   }
-
-  async getDueSummary(investorId: string) {
+async getDueSummary(investorId: string) {
   const investor = await this.prisma.investor.findUnique({
     where: { id: investorId },
     include: {
@@ -285,103 +285,302 @@ export class InvestorService {
                   billItems: {
                     include: {
                       bill: {
-                        include: { payments: true },
+                        include: { 
+                          payments: true,
+                          buyerPO: {
+                            include: {
+                              quotation: {
+                                select: {
+                                  companyName: true,
+                                  companyContact: true
+                                }
+                              }
+                            }
+                          }
+                        }
                       },
                     },
                   },
+                  retailItems: {
+                    include: {
+                      retailSale: true
+                    }
+                  }
                 },
               },
             },
           },
         },
+      },
+      investorPayments: {
+        orderBy: { paymentDate: 'desc' },
+        include: {
+          // Include any related payment details if needed
+        }
       }
     },
   });
 
   if (!investor) throw new NotFoundException('Investor not found');
 
+  // Investor Basic Information
+  const investorInfo = {
+    id: investor.id,
+    name: investor.name,
+    email: investor.email,
+    phone: investor.phone,
+    taxId: investor.taxId,
+    bankAccount: investor.bankAccount,
+    bankName: investor.bankName,
+    joinDate: investor.createdAt,
+    status: investor.isActive ? 'Active' : 'Inactive'
+  };
+
+  let totalInvestment = 0;
+  let totalRevenue = 0;
+  let totalCollected = 0;
   let totalProfitEarned = 0;
   let payableNow = 0;
 
-  const poBreakdown = [];
+  const investmentBreakdown = [];
+  const productSales = [];
 
   for (const inv of investor.investments) {
     const po = inv.purchaseOrder;
     const profitPercent = inv.profitPercentage / 100;
+    
+    totalInvestment += inv.investmentAmount;
 
     let poRevenue = 0;
     let poCollected = 0;
+    let poCost = 0;
 
-    // Loop through inventory items from this PO
+    // Calculate PO cost from items
+    poCost = po.items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+    // Track products and their sales
+    const poProducts = new Map();
+
+    // Process corporate sales (Bills)
     for (const inventory of po.inventory) {
       for (const billItem of inventory.billItems) {
         const bill = billItem.bill;
-
+        
         poRevenue += billItem.totalPrice;
 
-        // Add collected amount only
-        for (const p of bill.payments) {
-          poCollected += p.amount;
+        // Track product sales
+        const productKey = `${inventory.productName}-${inventory.productCode}`;
+        if (!poProducts.has(productKey)) {
+          poProducts.set(productKey, {
+            productName: inventory.productName,
+            productCode: inventory.productCode,
+            purchasePrice: inventory.purchasePrice,
+            expectedSalePrice: inventory.expectedSalePrice,
+            totalSold: 0,
+            totalRevenue: 0,
+            customers: new Set()
+          });
         }
+
+        const product = poProducts.get(productKey);
+        product.totalSold += billItem.quantity;
+        product.totalRevenue += billItem.totalPrice;
+        product.customers.add(bill.buyerPO?.quotation?.companyName || 'Unknown Customer');
+
+        // Calculate collected amount from bill payments
+        const billCollected = bill.payments.reduce((sum, p) => sum + p.amount, 0);
+        poCollected += (billItem.totalPrice / bill.totalAmount) * billCollected;
+      }
+
+      // Process retail sales
+      for (const retailItem of inventory.retailItems) {
+        const retailSale = retailItem.retailSale;
+        
+        poRevenue += retailItem.totalPrice;
+        poCollected += retailItem.totalPrice; // Retail sales are typically paid immediately
+
+        const productKey = `${inventory.productName}-${inventory.productCode}`;
+        if (!poProducts.has(productKey)) {
+          poProducts.set(productKey, {
+            productName: inventory.productName,
+            productCode: inventory.productCode,
+            purchasePrice: inventory.purchasePrice,
+            expectedSalePrice: inventory.expectedSalePrice,
+            totalSold: 0,
+            totalRevenue: 0,
+            customers: new Set()
+          });
+        }
+
+        const product = poProducts.get(productKey);
+        product.totalSold += retailItem.quantity;
+        product.totalRevenue += retailItem.totalPrice;
+        product.customers.add('Retail Customer');
       }
     }
 
     const poProfit = poRevenue * profitPercent;
     const poPayableNow = poCollected * profitPercent;
 
+    totalRevenue += poRevenue;
+    totalCollected += poCollected;
     totalProfitEarned += poProfit;
     payableNow += poPayableNow;
 
-    poBreakdown.push({
+    // Add to product sales breakdown
+    poProducts.forEach(product => {
+      productSales.push({
+        poId: po.id,
+        poNumber: po.poNumber,
+        ...product,
+        customers: Array.from(product.customers)
+      });
+    });
+
+    investmentBreakdown.push({
+      investmentId: inv.id,
       poId: po.id,
       poNumber: po.poNumber,
+      vendorName: po.vendorName,
+      investmentAmount: inv.investmentAmount,
+      profitPercentage: inv.profitPercentage,
+      poStatus: po.status,
+      orderDate: po.createdAt,
+      receivedDate: po.receivedAt,
+      
+      // Financial metrics
+      poCost,
       poRevenue,
       poCollected,
-      profitPercentage: inv.profitPercentage,
+      poProfit,
+      poPayableNow,
+      
+      // Performance metrics
+      roi: ((poRevenue - poCost) / poCost) * 100,
       profitEarned: poProfit,
       payableNow: poPayableNow,
+
+      // Products in this PO
+      products: po.items.map(item => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice
+      }))
     });
   }
 
-  // Previous payments to investor
-  const investorPayments = await this.prisma.investorPayment.findMany({
-    where: { investorId },
-  });
+  // Investor payments history
+  const paymentHistory = investor.investorPayments.map(payment => ({
+    id: payment.id,
+    amount: payment.amount,
+    paymentDate: payment.paymentDate,
+    description: payment.description,
+    paymentMethod: payment.paymentMethod,
+    reference: payment.reference
+  }));
 
-  const totalPaid = investorPayments.reduce((s, p) => s + p.amount, 0);
+  const totalPaid = paymentHistory.reduce((sum, p) => sum + p.amount, 0);
+  const totalDue = totalProfitEarned - totalPaid;
+  
+  // Recalculate payableNow considering already paid amounts
+  payableNow = Math.max(0, payableNow - totalPaid);
 
-  const due = totalProfitEarned - totalPaid;
-  payableNow = payableNow - totalPaid;
-
-  if (payableNow < 0) payableNow = 0;
+  // Performance metrics
+  const overallROI = totalInvestment > 0 ? ((totalProfitEarned - totalInvestment) / totalInvestment) * 100 : 0;
+  const collectionEfficiency = totalRevenue > 0 ? (totalCollected / totalRevenue) * 100 : 0;
 
   return {
-    investorId,
-    totalProfitEarned,
-    totalPaid,
-    totalDue: due,
-    payableNow,
-    poBreakdown,
+    // Investor Information
+    investor: investorInfo,
+    
+    // Summary Section
+    summary: {
+      totalInvestment,
+      totalRevenue,
+      totalCollected,
+      totalProfitEarned,
+      totalPaid,
+      totalDue,
+      payableNow,
+      overallROI: Number(overallROI.toFixed(2)),
+      collectionEfficiency: Number(collectionEfficiency.toFixed(2)),
+      activeInvestments: investor.investments.filter(inv => 
+        ['ORDERED', 'SHIPPED', 'RECEIVED'].includes(inv.purchaseOrder.status)
+      ).length
+    },
+
+    // Detailed Breakdowns
+    investmentBreakdown,
+    productSales,
+    paymentHistory,
+
+    // Timeline & Recent Activity
+    recentActivity: [
+      ...investmentBreakdown
+        .filter(inv => inv.poStatus === 'RECEIVED')
+        .map(inv => ({
+          type: 'PO_RECEIVED',
+          date: inv.receivedDate,
+          description: `Purchase Order ${inv.poNumber} received from ${inv.vendorName}`,
+          amount: inv.investmentAmount
+        })),
+      ...paymentHistory.map(payment => ({
+        type: 'PAYMENT_RECEIVED',
+        date: payment.paymentDate,
+        description: `Payment received - ${payment.description || 'Investor Payment'}`,
+        amount: payment.amount,
+        method: payment.paymentMethod
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10)
   };
 }
-async payInvestor(investorId: string, amount: number, description?: string) {
+
+async payInvestor(
+  investorId: string, 
+  amount: number, 
+  description?: string,
+  paymentMethod?: PaymentMethod,
+  reference?: string
+) {
   if (amount <= 0) throw new BadRequestException('Invalid amount');
 
-  // Check payable_now
+  // Verify investor exists
+  const investor = await this.prisma.investor.findUnique({
+    where: { id: investorId }
+  });
+
+  if (!investor) throw new NotFoundException('Investor not found');
+
+  // Check payable_now with enhanced summary
   const summary = await this.getDueSummary(investorId);
 
-  if (amount > summary.payableNow) {
+  if (amount > summary.summary.payableNow) {
     throw new BadRequestException(
-      `You can only pay up to ${summary.payableNow} BDT right now.`,
+      `You can only pay up to ${summary.summary.payableNow} BDT right now. Available from collected sales.`
     );
   }
 
-  return this.prisma.investorPayment.create({
+  // Create payment record
+  const payment = await this.prisma.investorPayment.create({
     data: {
       investorId,
       amount,
-      description,
+      description: description || `Payment for profits from sales`,
+      paymentMethod,
+      reference,
     },
   });
+
+  return {
+    success: true,
+    payment,
+    newBalance: {
+      previousDue: summary.summary.totalDue,
+      newDue: summary.summary.totalDue - amount,
+      remainingPayable: summary.summary.payableNow - amount
+    },
+    investor: summary.investor
+  };
 }
 }

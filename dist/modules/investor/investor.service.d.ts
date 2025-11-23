@@ -1,5 +1,6 @@
 import { CreateInvestorDto, UpdateInvestorDto } from './dto';
 import { DatabaseService } from '../database/database.service';
+import { PaymentMethod } from '@prisma/client';
 export declare class InvestorService {
     private prisma;
     constructor(prisma: DatabaseService);
@@ -155,18 +156,72 @@ export declare class InvestorService {
         amount: number;
     }[]>;
     getDueSummary(investorId: string): Promise<{
-        investorId: string;
-        totalProfitEarned: number;
-        totalPaid: number;
-        totalDue: number;
-        payableNow: number;
-        poBreakdown: any[];
+        investor: {
+            id: string;
+            name: string;
+            email: string;
+            phone: string;
+            taxId: string;
+            bankAccount: string;
+            bankName: string;
+            joinDate: Date;
+            status: string;
+        };
+        summary: {
+            totalInvestment: number;
+            totalRevenue: number;
+            totalCollected: number;
+            totalProfitEarned: number;
+            totalPaid: number;
+            totalDue: number;
+            payableNow: number;
+            overallROI: number;
+            collectionEfficiency: number;
+            activeInvestments: number;
+        };
+        investmentBreakdown: any[];
+        productSales: any[];
+        paymentHistory: {
+            id: string;
+            amount: number;
+            paymentDate: Date;
+            description: string;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
+            reference: string;
+        }[];
+        recentActivity: {
+            type: string;
+            date: any;
+            description: string;
+            amount: any;
+        }[];
     }>;
-    payInvestor(investorId: string, amount: number, description?: string): Promise<{
-        id: string;
-        investorId: string;
-        description: string | null;
-        amount: number;
-        paymentDate: Date;
+    payInvestor(investorId: string, amount: number, description?: string, paymentMethod?: PaymentMethod, reference?: string): Promise<{
+        success: boolean;
+        payment: {
+            id: string;
+            investorId: string;
+            description: string | null;
+            amount: number;
+            paymentDate: Date;
+            paymentMethod: import(".prisma/client").$Enums.PaymentMethod | null;
+            reference: string | null;
+        };
+        newBalance: {
+            previousDue: number;
+            newDue: number;
+            remainingPayable: number;
+        };
+        investor: {
+            id: string;
+            name: string;
+            email: string;
+            phone: string;
+            taxId: string;
+            bankAccount: string;
+            bankName: string;
+            joinDate: Date;
+            status: string;
+        };
     }>;
 }
