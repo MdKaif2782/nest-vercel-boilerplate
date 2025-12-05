@@ -31,6 +31,7 @@ export declare class UpdatePurchaseOrderDto implements Partial<CreatePurchaseOrd
     vendorCountry?: string;
     vendorAddress?: string;
     vendorContact?: string;
+    vendorContactNo?: string;
     paymentType?: PaymentType;
     totalAmount?: number;
     taxAmount?: number;

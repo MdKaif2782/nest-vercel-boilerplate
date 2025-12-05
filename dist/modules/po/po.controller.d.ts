@@ -10,16 +10,26 @@ export declare class PurchaseOrderController {
         message: string;
         data: {
             user: {
-                name: string;
                 id: string;
+                name: string;
                 email: string;
             };
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -29,37 +39,28 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         };
@@ -69,16 +70,26 @@ export declare class PurchaseOrderController {
         message: string;
         data: ({
             user: {
-                name: string;
                 id: string;
+                name: string;
                 email: string;
             };
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -88,37 +99,28 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];
@@ -134,31 +136,26 @@ export declare class PurchaseOrderController {
         message: string;
         data: {
             user: {
-                name: string;
                 id: string;
+                name: string;
                 email: string;
             };
-            inventory: {
+            items: {
                 id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
                 productName: string;
+                description: string | null;
                 quantity: number;
-                productCode: string;
-                barcode: string | null;
-                purchasePrice: number;
-                expectedSalePrice: number;
-                minStockLevel: number | null;
-                maxStockLevel: number | null;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
             }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -168,37 +165,43 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
+            inventory: {
                 id: string;
-                purchaseOrderId: string;
-                description: string | null;
+                createdAt: Date;
+                updatedAt: Date;
                 productName: string;
+                description: string | null;
                 quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
+                purchaseOrderId: string;
+                productCode: string;
+                barcode: string | null;
+                purchasePrice: number;
+                expectedSalePrice: number;
+                minStockLevel: number | null;
+                maxStockLevel: number | null;
             }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         };
@@ -207,12 +210,22 @@ export declare class PurchaseOrderController {
         statusCode: HttpStatus;
         message: string;
         data: {
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -222,37 +235,28 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         };
@@ -263,19 +267,20 @@ export declare class PurchaseOrderController {
         data: {
             inventoryItems: any[];
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         };
@@ -292,12 +297,22 @@ export declare class PurchaseOrderController {
         statusCode: HttpStatus;
         message: string;
         data: {
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -307,37 +322,28 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         };
@@ -352,16 +358,26 @@ export declare class PurchaseOrderController {
         message: string;
         data: ({
             user: {
-                name: string;
                 id: string;
+                name: string;
                 email: string;
             };
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -371,37 +387,28 @@ export declare class PurchaseOrderController {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];
@@ -472,9 +479,6 @@ export declare class PurchaseOrderController {
                 name: string;
                 email: string;
             };
-            _count: {
-                payments: number;
-            };
             payments: {
                 id: string;
                 notes: string | null;
@@ -484,21 +488,25 @@ export declare class PurchaseOrderController {
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 reference: string | null;
             }[];
+            _count: {
+                payments: number;
+            };
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];

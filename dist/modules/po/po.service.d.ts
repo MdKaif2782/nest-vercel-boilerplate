@@ -8,16 +8,26 @@ export declare class PurchaseOrderService {
     private validateAndProcessInvestments;
     createPurchaseOrder(dto: CreatePurchaseOrderDto, createdBy: string): Promise<{
         user: {
-            name: string;
             id: string;
+            name: string;
             email: string;
         };
+        items: {
+            id: string;
+            productName: string;
+            description: string | null;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+            purchaseOrderId: string;
+        }[];
         investments: ({
             investor: {
-                name: string;
                 id: string;
-                email: string;
                 createdAt: Date;
+                name: string;
+                email: string;
                 phone: string | null;
                 address: string | null;
                 taxId: string | null;
@@ -27,47 +37,48 @@ export declare class PurchaseOrderService {
             };
         } & {
             id: string;
+            purchaseOrderId: string;
             investmentAmount: number;
             profitPercentage: number;
             isFullInvestment: boolean;
-            purchaseOrderId: string;
             investorId: string;
         })[];
-        items: {
-            id: string;
-            purchaseOrderId: string;
-            description: string | null;
-            productName: string;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-        }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
         vendorAddress: string;
         vendorContact: string;
+        vendorContactNo: string | null;
         paymentType: import(".prisma/client").$Enums.PaymentType;
         status: import(".prisma/client").$Enums.POStatus;
         totalAmount: number;
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
     updatePurchaseOrder(id: string, dto: UpdatePurchaseOrderDto): Promise<{
+        items: {
+            id: string;
+            productName: string;
+            description: string | null;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+            purchaseOrderId: string;
+        }[];
         investments: ({
             investor: {
-                name: string;
                 id: string;
-                email: string;
                 createdAt: Date;
+                name: string;
+                email: string;
                 phone: string | null;
                 address: string | null;
                 taxId: string | null;
@@ -77,73 +88,96 @@ export declare class PurchaseOrderService {
             };
         } & {
             id: string;
+            purchaseOrderId: string;
             investmentAmount: number;
             profitPercentage: number;
             isFullInvestment: boolean;
-            purchaseOrderId: string;
             investorId: string;
         })[];
-        items: {
-            id: string;
-            purchaseOrderId: string;
-            description: string | null;
-            productName: string;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-        }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
         vendorAddress: string;
         vendorContact: string;
+        vendorContactNo: string | null;
         paymentType: import(".prisma/client").$Enums.PaymentType;
         status: import(".prisma/client").$Enums.POStatus;
         totalAmount: number;
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
     markAsReceived(id: string, dto: MarkAsReceivedDto): Promise<{
         inventoryItems: any[];
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
         vendorAddress: string;
         vendorContact: string;
+        vendorContactNo: string | null;
         paymentType: import(".prisma/client").$Enums.PaymentType;
         status: import(".prisma/client").$Enums.POStatus;
         totalAmount: number;
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
     findOne(id: string): Promise<{
         user: {
-            name: string;
             id: string;
+            name: string;
             email: string;
         };
+        items: {
+            id: string;
+            productName: string;
+            description: string | null;
+            quantity: number;
+            unitPrice: number;
+            taxPercentage: number;
+            totalPrice: number;
+            purchaseOrderId: string;
+        }[];
+        investments: ({
+            investor: {
+                id: string;
+                createdAt: Date;
+                name: string;
+                email: string;
+                phone: string | null;
+                address: string | null;
+                taxId: string | null;
+                bankAccount: string | null;
+                bankName: string | null;
+                isActive: boolean;
+            };
+        } & {
+            id: string;
+            purchaseOrderId: string;
+            investmentAmount: number;
+            profitPercentage: number;
+            isFullInvestment: boolean;
+            investorId: string;
+        })[];
         inventory: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            purchaseOrderId: string;
-            description: string | null;
             productName: string;
+            description: string | null;
             quantity: number;
+            purchaseOrderId: string;
             productCode: string;
             barcode: string | null;
             purchasePrice: number;
@@ -151,68 +185,48 @@ export declare class PurchaseOrderService {
             minStockLevel: number | null;
             maxStockLevel: number | null;
         }[];
-        investments: ({
-            investor: {
-                name: string;
-                id: string;
-                email: string;
-                createdAt: Date;
-                phone: string | null;
-                address: string | null;
-                taxId: string | null;
-                bankAccount: string | null;
-                bankName: string | null;
-                isActive: boolean;
-            };
-        } & {
-            id: string;
-            investmentAmount: number;
-            profitPercentage: number;
-            isFullInvestment: boolean;
-            purchaseOrderId: string;
-            investorId: string;
-        })[];
-        items: {
-            id: string;
-            purchaseOrderId: string;
-            description: string | null;
-            productName: string;
-            quantity: number;
-            unitPrice: number;
-            taxPercentage: number;
-            totalPrice: number;
-        }[];
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
         vendorAddress: string;
         vendorContact: string;
+        vendorContactNo: string | null;
         paymentType: import(".prisma/client").$Enums.PaymentType;
         status: import(".prisma/client").$Enums.POStatus;
         totalAmount: number;
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
     findAll(skip?: number, take?: number): Promise<{
         data: ({
             user: {
-                name: string;
                 id: string;
+                name: string;
                 email: string;
             };
+            items: {
+                id: string;
+                productName: string;
+                description: string | null;
+                quantity: number;
+                unitPrice: number;
+                taxPercentage: number;
+                totalPrice: number;
+                purchaseOrderId: string;
+            }[];
             investments: ({
                 investor: {
-                    name: string;
                     id: string;
-                    email: string;
                     createdAt: Date;
+                    name: string;
+                    email: string;
                     phone: string | null;
                     address: string | null;
                     taxId: string | null;
@@ -222,37 +236,28 @@ export declare class PurchaseOrderService {
                 };
             } & {
                 id: string;
+                purchaseOrderId: string;
                 investmentAmount: number;
                 profitPercentage: number;
                 isFullInvestment: boolean;
-                purchaseOrderId: string;
                 investorId: string;
             })[];
-            items: {
-                id: string;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
-                quantity: number;
-                unitPrice: number;
-                taxPercentage: number;
-                totalPrice: number;
-            }[];
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];
@@ -260,19 +265,20 @@ export declare class PurchaseOrderService {
     }>;
     delete(id: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         poNumber: string;
         vendorName: string;
         vendorCountry: string;
         vendorAddress: string;
         vendorContact: string;
+        vendorContactNo: string | null;
         paymentType: import(".prisma/client").$Enums.PaymentType;
         status: import(".prisma/client").$Enums.POStatus;
         totalAmount: number;
         taxAmount: number;
         dueAmount: number;
         notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         receivedAt: Date | null;
         createdBy: string;
     }>;
@@ -315,9 +321,6 @@ export declare class PurchaseOrderService {
                 name: string;
                 email: string;
             };
-            _count: {
-                payments: number;
-            };
             payments: {
                 id: string;
                 notes: string | null;
@@ -327,21 +330,25 @@ export declare class PurchaseOrderService {
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 reference: string | null;
             }[];
+            _count: {
+                payments: number;
+            };
         } & {
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
             poNumber: string;
             vendorName: string;
             vendorCountry: string;
             vendorAddress: string;
             vendorContact: string;
+            vendorContactNo: string | null;
             paymentType: import(".prisma/client").$Enums.PaymentType;
             status: import(".prisma/client").$Enums.POStatus;
             totalAmount: number;
             taxAmount: number;
             dueAmount: number;
             notes: string | null;
+            createdAt: Date;
+            updatedAt: Date;
             receivedAt: Date | null;
             createdBy: string;
         })[];

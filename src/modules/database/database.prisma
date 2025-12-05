@@ -42,6 +42,7 @@ model PurchaseOrder {
   vendorCountry String
   vendorAddress String
   vendorContact String
+  vendorContactNo String?
   paymentType PaymentType
   status      POStatus @default(PENDING)
   totalAmount Float

@@ -219,6 +219,7 @@ export declare class OrderService {
                         vendorCountry: string;
                         vendorAddress: string;
                         vendorContact: string;
+                        vendorContactNo: string | null;
                         paymentType: import(".prisma/client").$Enums.PaymentType;
                         status: import(".prisma/client").$Enums.POStatus;
                         totalAmount: number;

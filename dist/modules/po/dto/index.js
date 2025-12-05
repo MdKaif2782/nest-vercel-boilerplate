@@ -173,6 +173,12 @@ __decorate([
     __metadata("design:type", String)
 ], UpdatePurchaseOrderDto.prototype, "vendorContact", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Vendor contact' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdatePurchaseOrderDto.prototype, "vendorContactNo", void 0);
+__decorate([
     (0, swagger_1.ApiPropertyOptional)({ enum: client_1.PaymentType, description: 'Payment type' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(client_1.PaymentType),

@@ -7,112 +7,110 @@ import { AddPaymentDto, BillSearchDto, CreateBillDto } from './dto';
 export class BillService {
   constructor(private prisma: DatabaseService) {}
 
-  async create(createBillDto: CreateBillDto, createdBy: string) {
-    const { buyerPOId, ...billData } = createBillDto;
+async create(createBillDto: CreateBillDto, createdBy: string) {
+  const { buyerPOId, ...billData } = createBillDto;
 
-    return this.prisma.$transaction(async (tx) => {
-      // Get buyer PO and check if it exists
-      const buyerPO = await tx.buyerPurchaseOrder.findUnique({
-        where: { id: buyerPOId },
+  // Get buyer PO and check if it exists
+  const buyerPO = await this.prisma.buyerPurchaseOrder.findUnique({
+    where: { id: buyerPOId },
+    include: {
+      quotation: {
+        include: {
+          items: {
+            include: {
+              inventory: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!buyerPO) {
+    throw new NotFoundException(`Buyer Purchase Order with ID ${buyerPOId} not found`);
+  }
+
+  // Check if there's any remaining amount to bill
+  const existingBills = await this.prisma.bill.findMany({
+    where: { buyerPOId }
+  });
+
+  const totalBilled = existingBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+  const quotationTotal = buyerPO.quotation.totalAmount;
+  const remainingAmount = quotationTotal - totalBilled;
+
+  if (remainingAmount <= 0) {
+    throw new BadRequestException('This purchase order has been fully billed');
+  }
+
+  // Generate bill number
+  const billCount = await this.prisma.bill.count();
+  const billNumber = `BL-${String(billCount + 1).padStart(4, '0')}`;
+
+  // Use quotation items for the bill
+  const billItems = buyerPO.quotation.items.map(item => ({
+    productDescription: item.inventory.productName,
+    packagingDescription: item.inventory.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    totalPrice: item.totalPrice,
+    inventoryId: item.inventoryId
+  }));
+
+  const totalAmount = buyerPO.quotation.totalAmount;
+  const taxAmount = buyerPO.quotation.taxAmount || 0;
+  const dueAmount = totalAmount;
+
+  // Create the bill
+  const bill = await this.prisma.bill.create({
+    data: {
+      billNumber,
+      billDate: new Date(),
+      vatRegNo: billData.vatRegNo,
+      code: billData.code,
+      vendorNo: billData.vendorNo,
+      totalAmount,
+      taxAmount,
+      dueAmount,
+      status: 'PENDING',
+      buyerPOId,
+      createdBy,
+      items: {
+        create: billItems
+      }
+    },
+    include: {
+      items: {
+        include: {
+          inventory: {
+            select: {
+              productCode: true,
+              productName: true,
+            }
+          }
+        }
+      },
+      buyerPO: {
         include: {
           quotation: {
-            include: {
-              items: {
-                include: {
-                  inventory: true
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (!buyerPO) {
-        throw new NotFoundException(`Buyer Purchase Order with ID ${buyerPOId} not found`);
-      }
-
-      // Check if there's any remaining amount to bill
-      const existingBills = await tx.bill.findMany({
-        where: { buyerPOId }
-      });
-
-      const totalBilled = existingBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
-      const quotationTotal = buyerPO.quotation.totalAmount;
-      const remainingAmount = quotationTotal - totalBilled;
-
-      if (remainingAmount <= 0) {
-        throw new BadRequestException('This purchase order has been fully billed');
-      }
-
-      // Generate bill number
-      const billCount = await tx.bill.count();
-      const billNumber = `BL-${String(billCount + 1).padStart(4, '0')}`;
-
-      // Use quotation items for the bill
-      const billItems = buyerPO.quotation.items.map(item => ({
-        productDescription: item.inventory.productName,
-        packagingDescription: item.inventory.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        inventoryId: item.inventoryId
-      }));
-
-      const totalAmount = buyerPO.quotation.totalAmount;
-      const taxAmount = buyerPO.quotation.taxAmount || 0;
-      const dueAmount = totalAmount;
-
-      // Create the bill
-      const bill = await tx.bill.create({
-        data: {
-          billNumber,
-          billDate: new Date(),
-          vatRegNo: billData.vatRegNo,
-          code: billData.code,
-          vendorNo: billData.vendorNo,
-          totalAmount,
-          taxAmount,
-          dueAmount,
-          status: 'PENDING',
-          buyerPOId,
-          createdBy,
-          items: {
-            create: billItems
-          }
-        },
-        include: {
-          items: {
-            include: {
-              inventory: {
-                select: {
-                  productCode: true,
-                  productName: true,
-                }
-              }
-            }
-          },
-          buyerPO: {
-            include: {
-              quotation: {
-                select: {
-                  quotationNumber: true,
-                  companyName: true,
-                }
-              }
-            }
-          },
-          user: {
             select: {
-              name: true,
-              email: true,
+              quotationNumber: true,
+              companyName: true,
             }
           }
         }
-      });
+      },
+      user: {
+        select: {
+          name: true,
+          email: true,
+        }
+      }
+    }
+  });
 
-      return bill;
-    });
-  }
+  return bill;
+}
 
   async findAll(searchDto: BillSearchDto) {
     const {
@@ -250,67 +248,65 @@ export class BillService {
     return bill;
   }
 
-  async addPayment(id: string, addPaymentDto: AddPaymentDto) {
-    return this.prisma.$transaction(async (tx) => {
-      // Check if bill exists
-      const bill = await tx.bill.findUnique({
-        where: { id }
-      });
+async addPayment(id: string, addPaymentDto: AddPaymentDto) {
+  // Check if bill exists
+  const bill = await this.prisma.bill.findUnique({
+    where: { id }
+  });
 
-      if (!bill) {
-        throw new NotFoundException(`Bill with ID ${id} not found`);
-      }
-
-      if (bill.dueAmount <= 0) {
-        throw new BadRequestException('This bill has already been fully paid');
-      }
-
-      if (addPaymentDto.amount > bill.dueAmount) {
-        throw new BadRequestException(`Payment amount cannot exceed due amount of ${bill.dueAmount}`);
-      }
-
-      // Create payment
-      const payment = await tx.payment.create({
-        data: {
-          ...addPaymentDto,
-          billId: id
-        }
-      });
-
-      // Calculate new due amount
-      const allPayments = await tx.payment.findMany({
-        where: { billId: id }
-      });
-
-      const totalPaid = allPayments.reduce((sum, payment) => sum + payment.amount, 0);
-      const dueAmount = bill.totalAmount - totalPaid;
-
-      // Update bill status
-      let status: any = 'PENDING';
-      if (dueAmount <= 0) {
-        status = 'PAID';
-      } else if (totalPaid > 0) {
-        status = 'PARTIALLY_PAID';
-      }
-
-      const updatedBill = await tx.bill.update({
-        where: { id },
-        data: {
-          dueAmount,
-          status
-        },
-        include: {
-          payments: {
-            orderBy: {
-              paymentDate: 'desc'
-            }
-          }
-        }
-      });
-
-      return updatedBill;
-    });
+  if (!bill) {
+    throw new NotFoundException(`Bill with ID ${id} not found`);
   }
+
+  if (bill.dueAmount <= 0) {
+    throw new BadRequestException('This bill has already been fully paid');
+  }
+
+  if (addPaymentDto.amount > bill.dueAmount) {
+    throw new BadRequestException(`Payment amount cannot exceed due amount of ${bill.dueAmount}`);
+  }
+
+  // Create payment
+  const payment = await this.prisma.payment.create({
+    data: {
+      ...addPaymentDto,
+      billId: id
+    }
+  });
+
+  // Calculate new due amount
+  const allPayments = await this.prisma.payment.findMany({
+    where: { billId: id }
+  });
+
+  const totalPaid = allPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const dueAmount = bill.totalAmount - totalPaid;
+
+  // Update bill status
+  let status: any = 'PENDING';
+  if (dueAmount <= 0) {
+    status = 'PAID';
+  } else if (totalPaid > 0) {
+    status = 'PARTIALLY_PAID';
+  }
+
+  const updatedBill = await this.prisma.bill.update({
+    where: { id },
+    data: {
+      dueAmount,
+      status
+    },
+    include: {
+      payments: {
+        orderBy: {
+          paymentDate: 'desc'
+        }
+      }
+    }
+  });
+
+  return updatedBill;
+}
 
   async getStats() {
     const [

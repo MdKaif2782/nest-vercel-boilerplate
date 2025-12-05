@@ -142,6 +142,11 @@ export class UpdatePurchaseOrderDto implements Partial<CreatePurchaseOrderDto> {
   @IsString()
   vendorContact?: string;
 
+  @ApiPropertyOptional({ description: 'Vendor contact' })
+  @IsOptional()
+  @IsString()
+  vendorContactNo?: string;
+
   @ApiPropertyOptional({ enum: PaymentType, description: 'Payment type' })
   @IsOptional()
   @IsEnum(PaymentType)
