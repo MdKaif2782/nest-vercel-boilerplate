@@ -148,6 +148,7 @@ export declare class BillService {
                         quantity: number;
                         productCode: string;
                         barcode: string | null;
+                        imageUrl: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
@@ -329,6 +330,7 @@ export declare class BillService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;

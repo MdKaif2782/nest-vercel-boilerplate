@@ -17,6 +17,7 @@ export declare class OrderService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -71,6 +72,7 @@ export declare class OrderService {
                         quantity: number;
                         productCode: string;
                         barcode: string | null;
+                        imageUrl: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
@@ -147,6 +149,7 @@ export declare class OrderService {
                         quantity: number;
                         productCode: string;
                         barcode: string | null;
+                        imageUrl: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
@@ -239,6 +242,7 @@ export declare class OrderService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -282,6 +286,7 @@ export declare class OrderService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -331,6 +336,7 @@ export declare class OrderService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;
@@ -374,6 +380,7 @@ export declare class OrderService {
                     quantity: number;
                     productCode: string;
                     barcode: string | null;
+                    imageUrl: string | null;
                     purchasePrice: number;
                     expectedSalePrice: number;
                     minStockLevel: number | null;

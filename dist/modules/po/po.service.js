@@ -201,6 +201,7 @@ let PurchaseOrderService = class PurchaseOrderService {
                     productName: poItem.productName,
                     description: poItem.description,
                     quantity: receivedItem.receivedQuantity,
+                    imageUrl: receivedItem.imageUrl,
                     purchasePrice: poItem.unitPrice,
                     expectedSalePrice: receivedItem.expectedSalePrice,
                     purchaseOrderId: id,

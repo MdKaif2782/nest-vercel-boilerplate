@@ -1,6 +1,7 @@
 import { PaymentMethod, PaymentType, POStatus } from '@prisma/client';
 export declare class PurchaseOrderItemDto {
     productName: string;
+    imageUrl?: string;
     description?: string;
     quantity: number;
     unitPrice: number;
@@ -44,6 +45,7 @@ export declare class UpdatePurchaseOrderDto implements Partial<CreatePurchaseOrd
 export declare class ReceivedItemDto {
     purchaseOrderItemId: string;
     receivedQuantity: number;
+    imageUrl?: string;
     expectedSalePrice: number;
 }
 export declare class MarkAsReceivedDto {

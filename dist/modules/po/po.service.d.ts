@@ -180,6 +180,7 @@ export declare class PurchaseOrderService {
             purchaseOrderId: string;
             productCode: string;
             barcode: string | null;
+            imageUrl: string | null;
             purchasePrice: number;
             expectedSalePrice: number;
             minStockLevel: number | null;

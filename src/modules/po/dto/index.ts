@@ -19,6 +19,11 @@ export class PurchaseOrderItemDto {
   @IsString()
   productName: string;
 
+  @ApiProperty({ description: 'Product =image' })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
   @ApiPropertyOptional({ description: 'Product description' })
   @IsOptional()
   @IsString()
@@ -204,6 +209,10 @@ export class ReceivedItemDto {
   @IsNumber()
   @Min(0)
   receivedQuantity: number;
+
+  @IsString()
+  @IsOptional()
+  imageUrl?: string
 
   @ApiProperty({ description: 'Expected sale price', minimum: 0 })
   @IsNumber()

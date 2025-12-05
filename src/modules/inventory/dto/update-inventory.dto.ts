@@ -15,6 +15,10 @@ export class UpdateInventoryDto {
 
   @IsOptional()
   @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @IsOptional()

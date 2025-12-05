@@ -23,6 +23,12 @@ __decorate([
     __metadata("design:type", String)
 ], PurchaseOrderItemDto.prototype, "productName", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Product =image' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], PurchaseOrderItemDto.prototype, "imageUrl", void 0);
+__decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Product description' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
@@ -247,6 +253,11 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], ReceivedItemDto.prototype, "receivedQuantity", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ReceivedItemDto.prototype, "imageUrl", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Expected sale price', minimum: 0 }),
     (0, class_validator_1.IsNumber)(),

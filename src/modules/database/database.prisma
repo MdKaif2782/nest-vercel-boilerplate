@@ -129,6 +129,7 @@ model Inventory {
   productCode     String   @unique
   barcode         String?  @unique
   productName     String
+  imageUrl        String?
   description     String?
   quantity        Int
   purchasePrice   Float
