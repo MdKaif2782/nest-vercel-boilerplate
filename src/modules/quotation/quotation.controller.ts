@@ -17,9 +17,8 @@ import {
 } from '@nestjs/common';
 import { QuotationService } from './quotation.service';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
-import { QuotationSearchDto } from './dto/update-quotation.dto';
-import { AcceptQuotationDto } from './dto/update-quotation.dto';
+import { UpdateQuotationDto , QuotationSearchDto, AcceptQuotationDto} from './dto/update-quotation.dto';
+
 
 @Controller('quotations')
 export class QuotationController {

@@ -1,10 +1,9 @@
 // src/quotation/quotation.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
-import { QuotationSearchDto } from './dto/update-quotation.dto';
-import { AcceptQuotationDto } from './dto/update-quotation.dto';
+import { AcceptQuotationDto, QuotationSearchDto, UpdateQuotationDto } from './dto/update-quotation.dto';
 import { DatabaseService } from '../database/database.service';
+import { ExpenseCategory, ExpenseStatus, PaymentMethod, QuotationStatus } from '@prisma/client';
 
 @Injectable()
 export class QuotationService {
@@ -40,9 +39,11 @@ export class QuotationService {
           include: {
             inventory: {
               select: {
+                id: true,
                 productCode: true,
                 productName: true,
-                description: true
+                description: true,
+                imageUrl: true // Include imageUrl
               }
             }
           }
@@ -89,8 +90,10 @@ export class QuotationService {
             include: {
               inventory: {
                 select: {
+                  id: true,
                   productCode: true,
                   productName: true,
+                  imageUrl: true // Include imageUrl
                 }
               }
             }
@@ -132,6 +135,7 @@ export class QuotationService {
                 description: true,
                 quantity: true,
                 expectedSalePrice: true,
+                imageUrl: true // Include imageUrl
               }
             }
           }
@@ -188,8 +192,10 @@ export class QuotationService {
           include: {
             inventory: {
               select: {
+                id: true,
                 productCode: true,
                 productName: true,
+                imageUrl: true // Include imageUrl
               }
             }
           }
@@ -198,62 +204,186 @@ export class QuotationService {
     });
   }
 
-  async acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto) {
-    const quotation = await this.prisma.quotation.findUnique({
-      where: { id },
-      include: { items: true }
-    });
+ async acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto) {
+    return this.prisma.$transaction(async (prisma) => {
+      const quotation = await prisma.quotation.findUnique({
+        where: { id },
+        include: { 
+          items: {
+            include: {
+              inventory: {
+                select: {
+                  id: true,
+                  productCode: true,
+                  productName: true,
+                  description: true,
+                  imageUrl: true,
+                  quantity: true,
+                  expectedSalePrice: true,
+                  purchasePrice: true
+                }
+              }
+            }
+          } 
+        }
+      });
 
-    if (!quotation) {
-      throw new NotFoundException(`Quotation with ID ${id} not found`);
-    }
-
-    if (quotation.status === 'ACCEPTED') {
-      throw new BadRequestException('Quotation is already accepted');
-    }
-
-    if (quotation.status === 'REJECTED') {
-      throw new BadRequestException('Cannot accept a rejected quotation');
-    }
-
-    // Generate buyer PO number
-    const poCount = await this.prisma.buyerPurchaseOrder.count();
-    const poNumber = `BPO-${String(poCount + 1).padStart(4, '0')}`;
-
-    // Create Buyer Purchase Order
-    const buyerPO = await this.prisma.buyerPurchaseOrder.create({
-      data: {
-        poNumber,
-        poDate: acceptQuotationDto.poDate || new Date(),
-        pdfUrl: acceptQuotationDto.pdfUrl,
-        externalUrl: acceptQuotationDto.externalUrl,
-        quotation: { connect: { id } },
+      if (!quotation) {
+        throw new NotFoundException(`Quotation with ID ${id} not found`);
       }
-    });
 
-    // Update quotation status to ACCEPTED
-    const updatedQuotation = await this.prisma.quotation.update({
-      where: { id },
-      data: { status: 'ACCEPTED' },
-      include: {
-        items: {
-          include: {
+      if (quotation.status === 'ACCEPTED') {
+        throw new BadRequestException('Quotation is already accepted');
+      }
+
+      if (quotation.status === 'REJECTED') {
+        throw new BadRequestException('Cannot accept a rejected quotation');
+      }
+
+      let updatedQuotation = quotation;
+      
+      // Update quotation items if provided
+      if (acceptQuotationDto.items && acceptQuotationDto.items.length > 0) {
+        // Validate that all items exist in the quotation
+        const quotationItemIds = quotation.items.map(item => item.inventoryId);
+        const requestItemIds = acceptQuotationDto.items.map(item => item.inventoryId);
+        
+        // Check for invalid items (items not in original quotation)
+        const invalidItems = requestItemIds.filter(id => !quotationItemIds.includes(id));
+        if (invalidItems.length > 0) {
+          throw new BadRequestException(
+            `Cannot add new items. Invalid inventory IDs: ${invalidItems.join(', ')}`
+          );
+        }
+
+        // Update each item
+        for (const itemDto of acceptQuotationDto.items) {
+          const existingItem = quotation.items.find(
+            item => item.inventoryId === itemDto.inventoryId
+          );
+
+          if (existingItem) {
+            const updateData: any = {};
+            
+            // Only update fields that are provided
+            if (itemDto.quantity !== undefined) updateData.quantity = itemDto.quantity;
+            if (itemDto.unitPrice !== undefined) updateData.unitPrice = itemDto.unitPrice;
+            if (itemDto.packagePrice !== undefined) updateData.packagePrice = itemDto.packagePrice;
+            if (itemDto.mrp !== undefined) updateData.mrp = itemDto.mrp;
+            if (itemDto.taxPercentage !== undefined) updateData.taxPercentage = itemDto.taxPercentage;
+            
+            // Recalculate totalPrice if quantity or unitPrice changes
+            const newQuantity = itemDto.quantity !== undefined ? itemDto.quantity : existingItem.quantity;
+            const newUnitPrice = itemDto.unitPrice !== undefined ? itemDto.unitPrice : existingItem.unitPrice;
+            updateData.totalPrice = newQuantity * newUnitPrice;
+
+            await prisma.quotationItem.update({
+              where: { id: existingItem.id },
+              data: updateData
+            });
+          }
+        }
+
+        // Recalculate quotation totals
+        const updatedItems = await prisma.quotationItem.findMany({
+          where: { quotationId: id },
+          include: { 
             inventory: {
               select: {
+                id: true,
                 productCode: true,
                 productName: true,
+                description: true,
+                imageUrl: true
               }
             }
           }
-        },
-        buyerPO: true
-      }
-    });
+        });
 
-    return updatedQuotation;
+        const newTotalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+        const newTaxAmount = updatedItems.reduce((sum, item) => {
+          if (item.taxPercentage) {
+            return sum + (item.totalPrice * (item.taxPercentage / 100));
+          }
+          return sum;
+        }, 0);
+
+        // Update quotation with new totals
+        await prisma.quotation.update({
+          where: { id },
+          data: {
+            totalAmount: newTotalAmount,
+            taxAmount: newTaxAmount,
+          }
+        });
+      }
+
+      // Generate buyer PO number
+      const poCount = await prisma.buyerPurchaseOrder.count();
+      const poNumber = `BPO-${String(poCount + 1).padStart(4, '0')}`;
+
+      // Create Buyer Purchase Order
+      const buyerPO = await prisma.buyerPurchaseOrder.create({
+        data: {
+          poNumber,
+          poDate: acceptQuotationDto.poDate ? new Date(acceptQuotationDto.poDate) : new Date(),
+          pdfUrl: acceptQuotationDto.pdfUrl,
+          externalUrl: acceptQuotationDto.externalUrl,
+          quotation: { connect: { id } },
+        }
+      });
+
+      // Create commission expense if commission is provided and greater than 0
+
+      const recorder = await prisma.user.findFirst();
+      if(!recorder) throw new BadRequestException("At least one admin id must exists")
+
+      if (acceptQuotationDto.commission && acceptQuotationDto.commission > 0) {
+        await prisma.expense.create({
+          data: {
+            title: `Commission for Quotation ${quotation.quotationNumber}`,
+            description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}${acceptQuotationDto.commissionNotes ? ` - ${acceptQuotationDto.commissionNotes}` : ''}`,
+            amount: acceptQuotationDto.commission,
+            category: ExpenseCategory.COMMISSIONS,
+            paymentMethod: PaymentMethod.CASH,
+            status: ExpenseStatus.PENDING,
+            notes: `Commission recorded for accepting quotation ${quotation.quotationNumber}`,
+            recordedBy: recorder.id
+          }
+        });
+      }
+
+      // Update quotation status to ACCEPTED and return with full data
+      const finalQuotation = await prisma.quotation.update({
+        where: { id },
+        data: { status: 'ACCEPTED' },
+        include: {
+          items: {
+            include: {
+              inventory: {
+                select: {
+                  id: true,
+                  productCode: true,
+                  productName: true,
+                  description: true,
+                  imageUrl: true,
+                  quantity: true,
+                  expectedSalePrice: true,
+                  purchasePrice: true
+                }
+              }
+            }
+          },
+          buyerPO: true
+        }
+      });
+
+      return finalQuotation;
+    });
   }
 
-  async updateStatus(id: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED') {
+
+  async updateStatus(id: string, status: QuotationStatus) {
     const quotation = await this.prisma.quotation.findUnique({ where: { id } });
 
     if (!quotation) {
@@ -272,8 +402,10 @@ export class QuotationService {
           include: {
             inventory: {
               select: {
+                id: true,
                 productCode: true,
                 productName: true,
+                imageUrl: true // Include imageUrl
               }
             }
           }
@@ -313,8 +445,10 @@ export class QuotationService {
           include: {
             inventory: {
               select: {
+                id: true,
                 productCode: true,
                 productName: true,
+                imageUrl: true // Include imageUrl
               }
             }
           }

@@ -9,8 +9,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QuotationSearchDto = exports.AcceptQuotationDto = exports.UpdateQuotationDto = void 0;
+exports.QuotationSearchDto = exports.AcceptQuotationDto = exports.AcceptQuotationItemDto = exports.UpdateQuotationDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 const client_1 = require("@prisma/client");
 class UpdateQuotationDto {
 }
@@ -30,6 +31,31 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateQuotationDto.prototype, "companyContact", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuotationDto.prototype, "contactPersonName", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuotationDto.prototype, "subject", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuotationDto.prototype, "body", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuotationDto.prototype, "generalTerms", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuotationDto.prototype, "paymentTerms", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
@@ -68,6 +94,43 @@ __decorate([
     (0, class_validator_1.IsEnum)(client_1.QuotationStatus),
     __metadata("design:type", String)
 ], UpdateQuotationDto.prototype, "status", void 0);
+class AcceptQuotationItemDto {
+}
+exports.AcceptQuotationItemDto = AcceptQuotationItemDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AcceptQuotationItemDto.prototype, "inventoryId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AcceptQuotationItemDto.prototype, "unitPrice", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AcceptQuotationItemDto.prototype, "packagePrice", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], AcceptQuotationItemDto.prototype, "quantity", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AcceptQuotationItemDto.prototype, "mrp", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], AcceptQuotationItemDto.prototype, "taxPercentage", void 0);
 class AcceptQuotationDto {
 }
 exports.AcceptQuotationDto = AcceptQuotationDto;
@@ -86,7 +149,18 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], AcceptQuotationDto.prototype, "externalUrl", void 0);
-const class_transformer_1 = require("class-transformer");
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], AcceptQuotationDto.prototype, "commission", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => AcceptQuotationItemDto),
+    __metadata("design:type", Array)
+], AcceptQuotationDto.prototype, "items", void 0);
 class QuotationSearchDto {
     constructor() {
         this.page = 1;

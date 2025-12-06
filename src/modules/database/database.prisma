@@ -158,6 +158,7 @@ model Quotation {
   quotationNumber   String   @unique
   companyName       String
   companyAddress    String
+
   companyContact    String?
   deliveryTerms     String?
   deliveryDays      Int?
@@ -167,6 +168,14 @@ model Quotation {
   moneyInWords      String?
   createdAt         DateTime @default(now())
   validUntil        DateTime?
+
+  //new feilds
+  contactPersonName     String?
+  subject           String?
+  body              String?
+  generalTerms      String?
+  paymentTerms      String?
+  signatureImageUrl String?
   
   // Relations
   items      QuotationItem[]
@@ -378,14 +387,53 @@ model Expense {
 }
 
 enum ExpenseCategory {
-  ELECTRICITY
+  // Rent & Utilities
   RENT
-  TRAVEL
+  UTILITIES              // Electricity, Water, Gas combined
+  
+  // Office Operations
+  STATIONERY
+  PRINTING_PHOTOCOPYING
   OFFICE_SUPPLIES
-  MAINTENANCE
+  FURNITURE
+  EQUIPMENT
+  
+  // Technology
+  COMPUTER_HARDWARE
+  IT_ACCESSORIES
+  SOFTWARE
+  LICENSES
+  SUBSCRIPTIONS
   INTERNET
-  OTHER
+  COMMUNICATION          // Phone, Email, SIM
+  ELECTRICITY
+  
+  // Employee Expenses
   SALARY
+  ALLOWANCES
+  TRANSPORTATION
+  CONVEYANCE
+  
+  // Maintenance & Operations
+  REPAIRS
+  MAINTENANCE
+  REFRESHMENTS
+  CLEANING
+  HOUSEKEEPING
+  
+  // Security & Delivery
+  SECURITY
+  SURVEILLANCE
+  COURIER
+  POSTAGE
+  DELIVERY
+  
+  // Financial
+  COMMISSIONS
+  
+  // General
+  TRAVEL
+  OTHER
 }
 
 enum ExpenseStatus {

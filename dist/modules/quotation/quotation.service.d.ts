@@ -1,61 +1,70 @@
 import { CreateQuotationDto } from './dto/create-quotation.dto';
-import { UpdateQuotationDto } from './dto/update-quotation.dto';
-import { QuotationSearchDto } from './dto/update-quotation.dto';
-import { AcceptQuotationDto } from './dto/update-quotation.dto';
+import { AcceptQuotationDto, QuotationSearchDto, UpdateQuotationDto } from './dto/update-quotation.dto';
 import { DatabaseService } from '../database/database.service';
+import { QuotationStatus } from '@prisma/client';
 export declare class QuotationService {
     private prisma;
     constructor(prisma: DatabaseService);
     create(createQuotationDto: CreateQuotationDto): Promise<{
         items: ({
             inventory: {
-                description: string;
-                productName: string;
+                id: string;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
+                description: string;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
     findAll(searchDto: QuotationSearchDto): Promise<{
         data: ({
             items: ({
                 inventory: {
-                    productName: string;
+                    id: string;
                     productCode: string;
+                    productName: string;
+                    imageUrl: string;
                 };
             } & {
                 id: string;
                 quantity: number;
+                mrp: number;
                 unitPrice: number;
+                packagePrice: number;
                 taxPercentage: number | null;
                 totalPrice: number;
                 inventoryId: string;
                 quotationId: string;
-                mrp: number;
-                packagePrice: number;
             })[];
             buyerPO: {
                 id: string;
@@ -64,18 +73,24 @@ export declare class QuotationService {
             };
         } & {
             id: string;
-            createdAt: Date;
-            status: import(".prisma/client").$Enums.QuotationStatus;
-            totalAmount: number;
-            taxAmount: number;
             quotationNumber: string;
             companyName: string;
             companyAddress: string;
             companyContact: string | null;
             deliveryTerms: string | null;
             deliveryDays: number | null;
+            status: import(".prisma/client").$Enums.QuotationStatus;
+            totalAmount: number;
+            taxAmount: number;
             moneyInWords: string | null;
+            createdAt: Date;
             validUntil: Date | null;
+            contactPersonName: string | null;
+            subject: string | null;
+            body: string | null;
+            generalTerms: string | null;
+            paymentTerms: string | null;
+            signatureImageUrl: string | null;
         })[];
         meta: {
             page: number;
@@ -88,22 +103,23 @@ export declare class QuotationService {
         items: ({
             inventory: {
                 id: string;
-                description: string;
-                productName: string;
                 quantity: number;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
+                description: string;
                 expectedSalePrice: number;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
         buyerPO: {
             bills: {
@@ -122,177 +138,225 @@ export declare class QuotationService {
         } & {
             id: string;
             createdAt: Date;
+            quotationId: string;
             poNumber: string;
             poDate: Date;
             pdfUrl: string | null;
             externalUrl: string | null;
-            quotationId: string;
         };
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
     update(id: string, updateQuotationDto: UpdateQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
+                id: string;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
     acceptQuotation(id: string, acceptQuotationDto: AcceptQuotationDto): Promise<{
         items: ({
             inventory: {
-                productName: string;
+                id: string;
+                quantity: number;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
+                description: string;
+                purchasePrice: number;
+                expectedSalePrice: number;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
         buyerPO: {
             id: string;
             createdAt: Date;
+            quotationId: string;
             poNumber: string;
             poDate: Date;
             pdfUrl: string | null;
             externalUrl: string | null;
-            quotationId: string;
         };
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
-    updateStatus(id: string, status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'): Promise<{
+    updateStatus(id: string, status: QuotationStatus): Promise<{
         items: ({
             inventory: {
-                productName: string;
+                id: string;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
     remove(id: string): Promise<{
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     }>;
     getExpiredQuotations(): Promise<({
         items: ({
             inventory: {
-                productName: string;
+                id: string;
                 productCode: string;
+                productName: string;
+                imageUrl: string;
             };
         } & {
             id: string;
             quantity: number;
+            mrp: number;
             unitPrice: number;
+            packagePrice: number;
             taxPercentage: number | null;
             totalPrice: number;
             inventoryId: string;
             quotationId: string;
-            mrp: number;
-            packagePrice: number;
         })[];
     } & {
         id: string;
-        createdAt: Date;
-        status: import(".prisma/client").$Enums.QuotationStatus;
-        totalAmount: number;
-        taxAmount: number;
         quotationNumber: string;
         companyName: string;
         companyAddress: string;
         companyContact: string | null;
         deliveryTerms: string | null;
         deliveryDays: number | null;
+        status: import(".prisma/client").$Enums.QuotationStatus;
+        totalAmount: number;
+        taxAmount: number;
         moneyInWords: string | null;
+        createdAt: Date;
         validUntil: Date | null;
+        contactPersonName: string | null;
+        subject: string | null;
+        body: string | null;
+        generalTerms: string | null;
+        paymentTerms: string | null;
+        signatureImageUrl: string | null;
     })[]>;
 }

@@ -17,8 +17,6 @@ const common_1 = require("@nestjs/common");
 const quotation_service_1 = require("./quotation.service");
 const create_quotation_dto_1 = require("./dto/create-quotation.dto");
 const update_quotation_dto_1 = require("./dto/update-quotation.dto");
-const update_quotation_dto_2 = require("./dto/update-quotation.dto");
-const update_quotation_dto_3 = require("./dto/update-quotation.dto");
 let QuotationController = class QuotationController {
     constructor(quotationService) {
         this.quotationService = quotationService;
@@ -60,7 +58,7 @@ __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [update_quotation_dto_2.QuotationSearchDto]),
+    __metadata("design:paramtypes", [update_quotation_dto_1.QuotationSearchDto]),
     __metadata("design:returntype", void 0)
 ], QuotationController.prototype, "findAll", null);
 __decorate([
@@ -90,7 +88,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_quotation_dto_3.AcceptQuotationDto]),
+    __metadata("design:paramtypes", [String, update_quotation_dto_1.AcceptQuotationDto]),
     __metadata("design:returntype", void 0)
 ], QuotationController.prototype, "acceptQuotation", null);
 __decorate([

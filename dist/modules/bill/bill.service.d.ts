@@ -179,6 +179,12 @@ export declare class BillService {
                 deliveryDays: number | null;
                 moneyInWords: string | null;
                 validUntil: Date | null;
+                contactPersonName: string | null;
+                subject: string | null;
+                body: string | null;
+                generalTerms: string | null;
+                paymentTerms: string | null;
+                signatureImageUrl: string | null;
             };
         } & {
             id: string;

@@ -52,6 +52,26 @@ export class CreateQuotationDto {
 
   @IsOptional()
   @IsString()
+  contactPersonName?: string;
+
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @IsOptional()
+  @IsString()
+  generalTerms?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentTerms?: string;
+
+  @IsOptional()
+  @IsString()
   deliveryTerms?: string;
 
   @IsOptional()
@@ -72,6 +92,10 @@ export class CreateQuotationDto {
   @IsOptional()
   @IsString()
   moneyInWords?: string;
+
+  @IsOptional()
+  @IsString()
+  signatureImageUrl?: string;
 
   @IsOptional()
   @IsDateString()

@@ -19,9 +19,9 @@ export declare class EmployeeController {
             phone: string | null;
             address: string | null;
             isActive: boolean;
+            joinDate: Date;
             employeeId: string;
             designation: string;
-            joinDate: Date;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -46,6 +46,7 @@ export declare class EmployeeController {
             salaries: {
                 id: string;
                 status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -56,7 +57,6 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                paidDate: Date | null;
             }[];
         } & {
             name: string;
@@ -67,9 +67,9 @@ export declare class EmployeeController {
             phone: string | null;
             address: string | null;
             isActive: boolean;
+            joinDate: Date;
             employeeId: string;
             designation: string;
-            joinDate: Date;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -92,6 +92,7 @@ export declare class EmployeeController {
             } & {
                 id: string;
                 status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -102,7 +103,6 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                paidDate: Date | null;
             })[];
             paid: ({
                 employee: {
@@ -113,6 +113,7 @@ export declare class EmployeeController {
             } & {
                 id: string;
                 status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -123,7 +124,6 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                paidDate: Date | null;
             })[];
             month: number;
             year: number;
@@ -196,6 +196,7 @@ export declare class EmployeeController {
         } & {
             id: string;
             status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -206,7 +207,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            paidDate: Date | null;
         })[];
         message?: undefined;
     } | {
@@ -220,6 +220,7 @@ export declare class EmployeeController {
         data: {
             id: string;
             status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -230,7 +231,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            paidDate: Date | null;
         };
     } | {
         statusCode: HttpStatus;
@@ -243,6 +243,7 @@ export declare class EmployeeController {
         data: {
             id: string;
             status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -253,7 +254,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            paidDate: Date | null;
         };
     } | {
         statusCode: HttpStatus;
@@ -293,6 +293,7 @@ export declare class EmployeeController {
             salaries: {
                 id: string;
                 status: import(".prisma/client").$Enums.SalaryStatus;
+                paidDate: Date | null;
                 employeeId: string;
                 baseSalary: number;
                 month: number;
@@ -303,7 +304,6 @@ export declare class EmployeeController {
                 bonus: number | null;
                 deductions: number | null;
                 netSalary: number;
-                paidDate: Date | null;
             }[];
         } & {
             name: string;
@@ -314,9 +314,9 @@ export declare class EmployeeController {
             phone: string | null;
             address: string | null;
             isActive: boolean;
+            joinDate: Date;
             employeeId: string;
             designation: string;
-            joinDate: Date;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -344,9 +344,9 @@ export declare class EmployeeController {
             phone: string | null;
             address: string | null;
             isActive: boolean;
+            joinDate: Date;
             employeeId: string;
             designation: string;
-            joinDate: Date;
             baseSalary: number;
             homeRentAllowance: number;
             healthAllowance: number;
@@ -370,6 +370,7 @@ export declare class EmployeeController {
         data: {
             id: string;
             status: import(".prisma/client").$Enums.SalaryStatus;
+            paidDate: Date | null;
             employeeId: string;
             baseSalary: number;
             month: number;
@@ -380,7 +381,6 @@ export declare class EmployeeController {
             bonus: number | null;
             deductions: number | null;
             netSalary: number;
-            paidDate: Date | null;
         }[];
         message?: undefined;
     } | {

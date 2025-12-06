@@ -8,7 +8,12 @@ import {
   IsEnum,
   IsDateString,
   IsIn,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+// src/quotation/dto/quotation-search.dto.ts
+import { Type } from 'class-transformer';
+import { QuotationItemDto } from './create-quotation.dto';
 import { QuotationStatus } from '@prisma/client';
 
 export class UpdateQuotationDto {
@@ -23,6 +28,27 @@ export class UpdateQuotationDto {
   @IsOptional()
   @IsString()
   companyContact?: string;
+
+
+  @IsOptional()
+  @IsString()
+  contactPersonName?: string;
+
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @IsOptional()
+  @IsString()
+  generalTerms?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentTerms?: string;
 
   @IsOptional()
   @IsString()
@@ -58,6 +84,36 @@ export class UpdateQuotationDto {
 
 // src/quotation/dto/accept-quotation.dto.ts
 
+export class AcceptQuotationItemDto {
+  @IsString()
+  inventoryId: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  packagePrice?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  mrp?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  taxPercentage?: number;
+}
+
 export class AcceptQuotationDto {
   @IsOptional()
   @IsDateString()
@@ -70,10 +126,19 @@ export class AcceptQuotationDto {
   @IsOptional()
   @IsString()
   externalUrl?: string;
+
+  @IsOptional()
+  @IsNumber()
+  commission?:number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AcceptQuotationItemDto)
+  items?: AcceptQuotationItemDto[];
 }
 
-// src/quotation/dto/quotation-search.dto.ts
-import { Type } from 'class-transformer';
+
 
 export class QuotationSearchDto {
   @IsOptional()

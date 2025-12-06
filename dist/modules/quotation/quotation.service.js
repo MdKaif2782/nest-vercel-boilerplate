@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuotationService = void 0;
 const common_1 = require("@nestjs/common");
 const database_service_1 = require("../database/database.service");
+const client_1 = require("@prisma/client");
 let QuotationService = class QuotationService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -43,9 +44,11 @@ let QuotationService = class QuotationService {
                     include: {
                         inventory: {
                             select: {
+                                id: true,
                                 productCode: true,
                                 productName: true,
-                                description: true
+                                description: true,
+                                imageUrl: true
                             }
                         }
                     }
@@ -79,8 +82,10 @@ let QuotationService = class QuotationService {
                         include: {
                             inventory: {
                                 select: {
+                                    id: true,
                                     productCode: true,
                                     productName: true,
+                                    imageUrl: true
                                 }
                             }
                         }
@@ -120,6 +125,7 @@ let QuotationService = class QuotationService {
                                 description: true,
                                 quantity: true,
                                 expectedSalePrice: true,
+                                imageUrl: true
                             }
                         }
                     }
@@ -170,8 +176,10 @@ let QuotationService = class QuotationService {
                     include: {
                         inventory: {
                             select: {
+                                id: true,
                                 productCode: true,
                                 productName: true,
+                                imageUrl: true
                             }
                         }
                     }
@@ -180,48 +188,150 @@ let QuotationService = class QuotationService {
         });
     }
     async acceptQuotation(id, acceptQuotationDto) {
-        const quotation = await this.prisma.quotation.findUnique({
-            where: { id },
-            include: { items: true }
-        });
-        if (!quotation) {
-            throw new common_1.NotFoundException(`Quotation with ID ${id} not found`);
-        }
-        if (quotation.status === 'ACCEPTED') {
-            throw new common_1.BadRequestException('Quotation is already accepted');
-        }
-        if (quotation.status === 'REJECTED') {
-            throw new common_1.BadRequestException('Cannot accept a rejected quotation');
-        }
-        const poCount = await this.prisma.buyerPurchaseOrder.count();
-        const poNumber = `BPO-${String(poCount + 1).padStart(4, '0')}`;
-        const buyerPO = await this.prisma.buyerPurchaseOrder.create({
-            data: {
-                poNumber,
-                poDate: acceptQuotationDto.poDate || new Date(),
-                pdfUrl: acceptQuotationDto.pdfUrl,
-                externalUrl: acceptQuotationDto.externalUrl,
-                quotation: { connect: { id } },
-            }
-        });
-        const updatedQuotation = await this.prisma.quotation.update({
-            where: { id },
-            data: { status: 'ACCEPTED' },
-            include: {
-                items: {
-                    include: {
-                        inventory: {
-                            select: {
-                                productCode: true,
-                                productName: true,
+        return this.prisma.$transaction(async (prisma) => {
+            const quotation = await prisma.quotation.findUnique({
+                where: { id },
+                include: {
+                    items: {
+                        include: {
+                            inventory: {
+                                select: {
+                                    id: true,
+                                    productCode: true,
+                                    productName: true,
+                                    description: true,
+                                    imageUrl: true,
+                                    quantity: true,
+                                    expectedSalePrice: true,
+                                    purchasePrice: true
+                                }
                             }
                         }
                     }
-                },
-                buyerPO: true
+                }
+            });
+            if (!quotation) {
+                throw new common_1.NotFoundException(`Quotation with ID ${id} not found`);
             }
+            if (quotation.status === 'ACCEPTED') {
+                throw new common_1.BadRequestException('Quotation is already accepted');
+            }
+            if (quotation.status === 'REJECTED') {
+                throw new common_1.BadRequestException('Cannot accept a rejected quotation');
+            }
+            let updatedQuotation = quotation;
+            if (acceptQuotationDto.items && acceptQuotationDto.items.length > 0) {
+                const quotationItemIds = quotation.items.map(item => item.inventoryId);
+                const requestItemIds = acceptQuotationDto.items.map(item => item.inventoryId);
+                const invalidItems = requestItemIds.filter(id => !quotationItemIds.includes(id));
+                if (invalidItems.length > 0) {
+                    throw new common_1.BadRequestException(`Cannot add new items. Invalid inventory IDs: ${invalidItems.join(', ')}`);
+                }
+                for (const itemDto of acceptQuotationDto.items) {
+                    const existingItem = quotation.items.find(item => item.inventoryId === itemDto.inventoryId);
+                    if (existingItem) {
+                        const updateData = {};
+                        if (itemDto.quantity !== undefined)
+                            updateData.quantity = itemDto.quantity;
+                        if (itemDto.unitPrice !== undefined)
+                            updateData.unitPrice = itemDto.unitPrice;
+                        if (itemDto.packagePrice !== undefined)
+                            updateData.packagePrice = itemDto.packagePrice;
+                        if (itemDto.mrp !== undefined)
+                            updateData.mrp = itemDto.mrp;
+                        if (itemDto.taxPercentage !== undefined)
+                            updateData.taxPercentage = itemDto.taxPercentage;
+                        const newQuantity = itemDto.quantity !== undefined ? itemDto.quantity : existingItem.quantity;
+                        const newUnitPrice = itemDto.unitPrice !== undefined ? itemDto.unitPrice : existingItem.unitPrice;
+                        updateData.totalPrice = newQuantity * newUnitPrice;
+                        await prisma.quotationItem.update({
+                            where: { id: existingItem.id },
+                            data: updateData
+                        });
+                    }
+                }
+                const updatedItems = await prisma.quotationItem.findMany({
+                    where: { quotationId: id },
+                    include: {
+                        inventory: {
+                            select: {
+                                id: true,
+                                productCode: true,
+                                productName: true,
+                                description: true,
+                                imageUrl: true
+                            }
+                        }
+                    }
+                });
+                const newTotalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+                const newTaxAmount = updatedItems.reduce((sum, item) => {
+                    if (item.taxPercentage) {
+                        return sum + (item.totalPrice * (item.taxPercentage / 100));
+                    }
+                    return sum;
+                }, 0);
+                await prisma.quotation.update({
+                    where: { id },
+                    data: {
+                        totalAmount: newTotalAmount,
+                        taxAmount: newTaxAmount,
+                    }
+                });
+            }
+            const poCount = await prisma.buyerPurchaseOrder.count();
+            const poNumber = `BPO-${String(poCount + 1).padStart(4, '0')}`;
+            const buyerPO = await prisma.buyerPurchaseOrder.create({
+                data: {
+                    poNumber,
+                    poDate: acceptQuotationDto.poDate ? new Date(acceptQuotationDto.poDate) : new Date(),
+                    pdfUrl: acceptQuotationDto.pdfUrl,
+                    externalUrl: acceptQuotationDto.externalUrl,
+                    quotation: { connect: { id } },
+                }
+            });
+            const recorder = await prisma.user.findFirst();
+            if (!recorder)
+                throw new common_1.BadRequestException("At least one admin id must exists");
+            if (acceptQuotationDto.commission && acceptQuotationDto.commission > 0) {
+                await prisma.expense.create({
+                    data: {
+                        title: `Commission for Quotation ${quotation.quotationNumber}`,
+                        description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}${acceptQuotationDto.commissionNotes ? ` - ${acceptQuotationDto.commissionNotes}` : ''}`,
+                        amount: acceptQuotationDto.commission,
+                        category: client_1.ExpenseCategory.COMMISSIONS,
+                        paymentMethod: client_1.PaymentMethod.CASH,
+                        status: client_1.ExpenseStatus.PENDING,
+                        notes: `Commission recorded for accepting quotation ${quotation.quotationNumber}`,
+                        recordedBy: recorder.id
+                    }
+                });
+            }
+            const finalQuotation = await prisma.quotation.update({
+                where: { id },
+                data: { status: 'ACCEPTED' },
+                include: {
+                    items: {
+                        include: {
+                            inventory: {
+                                select: {
+                                    id: true,
+                                    productCode: true,
+                                    productName: true,
+                                    description: true,
+                                    imageUrl: true,
+                                    quantity: true,
+                                    expectedSalePrice: true,
+                                    purchasePrice: true
+                                }
+                            }
+                        }
+                    },
+                    buyerPO: true
+                }
+            });
+            return finalQuotation;
         });
-        return updatedQuotation;
     }
     async updateStatus(id, status) {
         const quotation = await this.prisma.quotation.findUnique({ where: { id } });
@@ -239,8 +349,10 @@ let QuotationService = class QuotationService {
                     include: {
                         inventory: {
                             select: {
+                                id: true,
                                 productCode: true,
                                 productName: true,
+                                imageUrl: true
                             }
                         }
                     }
@@ -274,8 +386,10 @@ let QuotationService = class QuotationService {
                     include: {
                         inventory: {
                             select: {
+                                id: true,
                                 productCode: true,
                                 productName: true,
+                                imageUrl: true
                             }
                         }
                     }
