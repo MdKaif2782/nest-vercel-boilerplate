@@ -297,7 +297,7 @@ let QuotationService = class QuotationService {
                 await prisma.expense.create({
                     data: {
                         title: `Commission for Quotation ${quotation.quotationNumber}`,
-                        description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}${acceptQuotationDto.commissionNotes ? ` - ${acceptQuotationDto.commissionNotes}` : ''}`,
+                        description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}`,
                         amount: acceptQuotationDto.commission,
                         category: client_1.ExpenseCategory.COMMISSIONS,
                         paymentMethod: client_1.PaymentMethod.CASH,

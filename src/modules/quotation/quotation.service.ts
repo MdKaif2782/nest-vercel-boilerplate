@@ -342,7 +342,7 @@ export class QuotationService {
         await prisma.expense.create({
           data: {
             title: `Commission for Quotation ${quotation.quotationNumber}`,
-            description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}${acceptQuotationDto.commissionNotes ? ` - ${acceptQuotationDto.commissionNotes}` : ''}`,
+            description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}`,
             amount: acceptQuotationDto.commission,
             category: ExpenseCategory.COMMISSIONS,
             paymentMethod: PaymentMethod.CASH,
