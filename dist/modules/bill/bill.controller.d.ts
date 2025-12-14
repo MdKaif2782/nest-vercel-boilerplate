@@ -34,6 +34,7 @@ export declare class BillController {
             createdAt: Date;
             poNumber: string;
             poDate: Date;
+            dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
             quotationId: string;
@@ -80,6 +81,7 @@ export declare class BillController {
                 createdAt: Date;
                 poNumber: string;
                 poDate: Date;
+                dispatchedQuantity: number;
                 pdfUrl: string | null;
                 externalUrl: string | null;
                 quotationId: string;
@@ -133,6 +135,7 @@ export declare class BillController {
             createdAt: Date;
             poNumber: string;
             poDate: Date;
+            dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
             quotationId: string;
@@ -194,6 +197,7 @@ export declare class BillController {
         createdAt: Date;
         poNumber: string;
         poDate: Date;
+        dispatchedQuantity: number;
         pdfUrl: string | null;
         externalUrl: string | null;
         quotationId: string;
@@ -327,6 +331,7 @@ export declare class BillController {
             createdAt: Date;
             poNumber: string;
             poDate: Date;
+            dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
             quotationId: string;

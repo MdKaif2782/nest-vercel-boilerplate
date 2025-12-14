@@ -4,9 +4,7 @@ import {
   Post, 
   Put, 
   Body, 
-  Param, 
-  Query,
-  ParseUUIDPipe 
+  Param
 } from '@nestjs/common';
 import { ChallanService } from './challan.service';
 import { 
@@ -19,6 +17,7 @@ import {
 export class ChallanController {
   constructor(private readonly challanService: ChallanService) {}
 
+  // ---------- STATIC ROUTES ----------
   @Get('pending-bpos')
   async getPendingBPOs() {
     return this.challanService.getPendingBPOs();
@@ -29,14 +28,20 @@ export class ChallanController {
     return this.challanService.getDispatchSummary();
   }
 
+  @Post('dispatch-bpo')
+  async markAsDispatched(@Body() dto: DispatchBPODto) {
+    return this.challanService.markAsDispatched(dto);
+  }
+
+  @Get('bpo/:bpoId/challans')
+  async getChallansByBPO(@Param('bpoId') bpoId: string) {
+    return this.challanService.getChallansByBPOId(bpoId);
+  }
+
+  // ---------- GENERIC ROUTES ----------
   @Get()
   async getAllChallans() {
     return this.challanService.getAllChallans();
-  }
-
-  @Get(':id')
-  async getChallanById(@Param('id', ParseUUIDPipe) id: string) {
-    return this.challanService.getChallanById(id);
   }
 
   @Post()
@@ -44,22 +49,17 @@ export class ChallanController {
     return this.challanService.createChallan(dto);
   }
 
-  @Post('dispatch-bpo')
-  async markAsDispatched(@Body() dto: DispatchBPODto) {
-    return this.challanService.markAsDispatched(dto);
+  // ---------- DYNAMIC ROUTES (LAST) ----------
+  @Get(':id')
+  async getChallanById(@Param('id') id: string) {
+    return this.challanService.getChallanById(id);
   }
 
   @Put(':id/status')
   async updateChallanStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateChallanStatusDto
+    @Param('id') id: string,
+    @Body() dto: UpdateChallanStatusDto,
   ) {
     return this.challanService.updateChallanStatus(id, dto);
-  }
-
-  @Get('bpo/:bpoId/challans')
-  async getChallansByBPO(@Param('bpoId', ParseUUIDPipe) bpoId: string) {
-    // This would be implemented in service
-    return this.challanService.getAllChallans(); // Filter by BPO in actual implementation
   }
 }
