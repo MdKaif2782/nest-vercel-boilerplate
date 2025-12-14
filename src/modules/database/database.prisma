@@ -209,11 +209,11 @@ enum QuotationStatus {
   EXPIRED
 }
 
-// Module 4: Purchase Order (from Buyer)
 model BuyerPurchaseOrder {
   id          String   @id @default(cuid())
   poNumber    String   @unique
   poDate      DateTime
+  dispatchedQuantity Int @default(0) // Track how much has been dispatched
   pdfUrl      String?
   externalUrl String?
   createdAt   DateTime @default(now())
@@ -222,11 +222,10 @@ model BuyerPurchaseOrder {
   quotationId String   @unique
   quotation   Quotation @relation(fields: [quotationId], references: [id])
   bills       Bill[]
+  challans    Challan[]
   
   @@map("buyer_purchase_orders")
-  challans Challan[]
 }
-
 // Module 5: Challan
 model Challan {
   id          String   @id @default(cuid())
