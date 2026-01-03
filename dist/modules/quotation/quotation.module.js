@@ -10,11 +10,13 @@ exports.QuotationModule = void 0;
 const common_1 = require("@nestjs/common");
 const quotation_service_1 = require("./quotation.service");
 const quotation_controller_1 = require("./quotation.controller");
+const pdf_module_1 = require("../pdf/pdf.module");
 let QuotationModule = class QuotationModule {
 };
 exports.QuotationModule = QuotationModule;
 exports.QuotationModule = QuotationModule = __decorate([
     (0, common_1.Module)({
+        imports: [pdf_module_1.PdfModule],
         controllers: [quotation_controller_1.QuotationController],
         providers: [quotation_service_1.QuotationService],
     })

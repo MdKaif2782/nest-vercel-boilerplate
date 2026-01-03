@@ -13,18 +13,25 @@ exports.QuotationService = void 0;
 const common_1 = require("@nestjs/common");
 const database_service_1 = require("../database/database.service");
 const client_1 = require("@prisma/client");
+const pdf_service_1 = require("../pdf/pdf.service");
 let QuotationService = class QuotationService {
-    constructor(prisma) {
+    constructor(prisma, pdfService) {
         this.prisma = prisma;
+        this.pdfService = pdfService;
     }
     async create(createQuotationDto) {
         const { items, ...quotationData } = createQuotationDto;
+        const totalAmount = items.reduce((sum, item) => {
+            return sum + (item.quantity * item.unitPrice);
+        }, 0);
         const quotationCount = await this.prisma.quotation.count();
-        const quotationNumber = `QT-${String(quotationCount + 1).padStart(4, '0')}`;
-        return this.prisma.quotation.create({
+        const quotationNumber = `GSGC-${String(quotationCount + 1).padStart(4, '0')}`;
+        const quotation = await this.prisma.quotation.create({
             data: {
                 ...quotationData,
                 quotationNumber,
+                totalAmount,
+                taxAmount: quotationData.taxAmount || 0,
                 items: {
                     create: items.map(item => ({
                         quantity: item.quantity,
@@ -55,6 +62,38 @@ let QuotationService = class QuotationService {
                 }
             }
         });
+        return quotation;
+    }
+    async generatePdf(quotationId) {
+        const quotation = await this.prisma.quotation.findUnique({
+            where: { id: quotationId },
+        });
+        if (!quotation) {
+            throw new common_1.NotFoundException(`Quotation with ID ${quotationId} not found`);
+        }
+        const pdfBuffer = await this.pdfService.generateQuotationPdf(quotationId);
+        return pdfBuffer;
+    }
+    async getQuotationWithPdf(quotationId) {
+        const quotation = await this.prisma.quotation.findUnique({
+            where: { id: quotationId },
+            include: {
+                items: {
+                    include: {
+                        inventory: true,
+                    },
+                },
+            },
+        });
+        if (!quotation) {
+            throw new common_1.NotFoundException(`Quotation with ID ${quotationId} not found`);
+        }
+        const pdfBuffer = await this.pdfService.generateQuotationPdf(quotationId);
+        return {
+            ...quotation,
+            pdfBase64: pdfBuffer.toString('base64'),
+            pdfBuffer: pdfBuffer,
+        };
     }
     async findAll(searchDto) {
         const { page = 1, limit = 10, search, status, sortBy = 'createdAt', sortOrder = 'desc' } = searchDto;
@@ -401,6 +440,7 @@ let QuotationService = class QuotationService {
 exports.QuotationService = QuotationService;
 exports.QuotationService = QuotationService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [database_service_1.DatabaseService])
+    __metadata("design:paramtypes", [database_service_1.DatabaseService,
+        pdf_service_1.PdfService])
 ], QuotationService);
 //# sourceMappingURL=quotation.service.js.map

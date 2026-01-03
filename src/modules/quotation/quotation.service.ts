@@ -4,22 +4,34 @@ import { CreateQuotationDto } from './dto/create-quotation.dto';
 import { AcceptQuotationDto, QuotationSearchDto, UpdateQuotationDto } from './dto/update-quotation.dto';
 import { DatabaseService } from '../database/database.service';
 import { ExpenseCategory, ExpenseStatus, PaymentMethod, QuotationStatus } from '@prisma/client';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class QuotationService {
-  constructor(private prisma: DatabaseService) {}
+  constructor(
+    private prisma: DatabaseService,
+    private readonly pdfService: PdfService,
+  ) {}
 
-  async create(createQuotationDto: CreateQuotationDto) {
+async create(createQuotationDto: CreateQuotationDto) {
     const { items, ...quotationData } = createQuotationDto;
+
+    // Calculate total amount
+    const totalAmount = items.reduce((sum, item) => {
+      return sum + (item.quantity * item.unitPrice);
+    }, 0);
 
     // Generate quotation number
     const quotationCount = await this.prisma.quotation.count();
-    const quotationNumber = `QT-${String(quotationCount + 1).padStart(4, '0')}`;
+    const quotationNumber = `GSGC-${String(quotationCount + 1).padStart(4, '0')}`;
 
-    return this.prisma.quotation.create({
+    // Create quotation
+    const quotation = await this.prisma.quotation.create({
       data: {
         ...quotationData,
         quotationNumber,
+        totalAmount,
+        taxAmount: quotationData.taxAmount || 0,
         items: {
           create: items.map(item => ({
             quantity: item.quantity,
@@ -43,13 +55,57 @@ export class QuotationService {
                 productCode: true,
                 productName: true,
                 description: true,
-                imageUrl: true // Include imageUrl
+                imageUrl: true
               }
             }
           }
         }
       }
     });
+
+    return quotation;
+  }
+
+  async generatePdf(quotationId: string): Promise<Buffer> {
+    // Check if quotation exists
+    const quotation = await this.prisma.quotation.findUnique({
+      where: { id: quotationId },
+    });
+
+    if (!quotation) {
+      throw new NotFoundException(`Quotation with ID ${quotationId} not found`);
+    }
+
+    // Generate PDF
+    const pdfBuffer = await this.pdfService.generateQuotationPdf(quotationId);
+    
+    return pdfBuffer;
+  }
+
+  async getQuotationWithPdf(quotationId: string) {
+    const quotation = await this.prisma.quotation.findUnique({
+      where: { id: quotationId },
+      include: {
+        items: {
+          include: {
+            inventory: true,
+          },
+        },
+      },
+    });
+
+    if (!quotation) {
+      throw new NotFoundException(`Quotation with ID ${quotationId} not found`);
+    }
+
+    // Generate PDF
+    const pdfBuffer = await this.pdfService.generateQuotationPdf(quotationId);
+    
+    return {
+      ...quotation,
+      pdfBase64: pdfBuffer.toString('base64'),
+      pdfBuffer: pdfBuffer,
+    };
   }
 
   async findAll(searchDto: QuotationSearchDto) {

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { Auth } from 'firebase-admin/lib/auth/auth';
 import { AuthModule } from '../auth/auth.module';
 import { InvestorModule } from '../investor/investor.module';
 import { PoModule } from '../po/po.module';
@@ -15,6 +14,7 @@ import { ExpenseModule } from '../expense/expense.module';
 import { ReportModule } from '../report/report.module';
 import { StatisticsModule } from '../statistics/statistics.module';
 import { ChallanModule } from '../challan/challan.module';
+import { PdfModule } from '../pdf/pdf.module';
 
 @Module({
   imports: [
@@ -33,7 +33,8 @@ import { ChallanModule } from '../challan/challan.module';
     ExpenseModule,
     ReportModule,
     StatisticsModule,
-    ChallanModule
+    ChallanModule,
+    PdfModule
     //FirebaseModule,
   ],
   controllers: [AppController],

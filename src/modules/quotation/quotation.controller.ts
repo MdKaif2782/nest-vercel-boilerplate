@@ -14,10 +14,12 @@ import {
   ValidationPipe,
   HttpStatus,
   HttpCode,
+  Res,
 } from '@nestjs/common';
 import { QuotationService } from './quotation.service';
 import { CreateQuotationDto } from './dto/create-quotation.dto';
 import { UpdateQuotationDto , QuotationSearchDto, AcceptQuotationDto} from './dto/update-quotation.dto';
+import { Response } from 'express';
 
 
 @Controller('quotations')
@@ -28,6 +30,33 @@ export class QuotationController {
   create(@Body(ValidationPipe) createQuotationDto: CreateQuotationDto) {
     return this.quotationService.create(createQuotationDto);
   }
+
+  @Get(':id/pdf')
+  async getPdf(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const pdfBuffer = await this.quotationService.generatePdf(id);
+      
+      // Set headers for PDF download
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+      
+      // Send PDF
+      res.status(HttpStatus.OK).send(pdfBuffer);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate PDF',
+        error: error.message,
+      });
+    }
+  }
+
+  // @Get(':id')
+  // async findOne(@Param('id') id: string) {
+  //   return this.quotationService.getQuotationWithPdf(id);
+  // }
 
   @Get()
   findAll(@Query(ValidationPipe) searchDto: QuotationSearchDto) {
