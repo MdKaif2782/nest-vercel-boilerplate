@@ -66,6 +66,7 @@ export class PdfService {
     try {
       // Create LaTeX content
       const latexContent = this.generateLatexTemplate(quotation);
+      console.log(latexContent)
       const texFilePath = path.join(tmpDir.path, 'quotation.tex');
       
       // Write LaTeX file
@@ -90,31 +91,40 @@ export class PdfService {
   /**
    * Generate LaTeX template with quotation data
    */
-  private generateLatexTemplate(quotation: QuotationWithItems): string {
+private generateLatexTemplate(quotation: QuotationWithItems): string {
     // Helper function to escape LaTeX special characters
     const escapeLatex = (text: string): string => {
-      if (!text) return '';
-      return text
-        .replace(/\\/g, '\\textbackslash{}')
-        .replace(/#/g, '\\#')
-        .replace(/\$/g, '\\$')
-        .replace(/%/g, '\\%')
-        .replace(/&/g, '\\&')
-        .replace(/_/g, '\\_')
-        .replace(/{/g, '\\{')
-        .replace(/}/g, '\\}')
-        .replace(/~/g, '\\textasciitilde{}')
-        .replace(/\^/g, '\\textasciicircum{}')
-        .replace(/</g, '\\textless{}')
-        .replace(/>/g, '\\textgreater{}');
+        if (!text) return '';
+        return text
+            .replace(/\\/g, '\\textbackslash{}')
+            .replace(/#/g, '\\#')
+            .replace(/\$/g, '\\$')
+            .replace(/%/g, '\\%')
+            .replace(/&/g, '\\&')
+            .replace(/_/g, '\\_')
+            .replace(/{/g, '\\{')
+            .replace(/}/g, '\\}')
+            .replace(/~/g, '\\textasciitilde{}')
+            .replace(/\^/g, '\\textasciicircum{}')
+            .replace(/</g, '\\textless{}')
+            .replace(/>/g, '\\textgreater{}')
+            .replace(/\n/g, ' ');
     };
 
     // Format currency
     const formatCurrency = (amount: number): string => {
-      return new Intl.NumberFormat('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
+        return new Intl.NumberFormat('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount);
+    };
+
+    // Truncate product code
+    const truncateProductCode = (code: string, maxLength: number = 20): string => {
+        if (!code || code.length <= maxLength) return code;
+        const firstPart = code.substring(0, 8);
+        const lastPart = code.substring(code.length - 3);
+        return `${firstPart}…${lastPart}`;
     };
 
     // Generate items table rows
@@ -123,21 +133,18 @@ export class PdfService {
     let subTotal = 0;
 
     quotation.items.forEach((item) => {
-      const amount = item.quantity * item.unitPrice;
-      subTotal += amount;
+        const amount = item.quantity * item.unitPrice;
+        subTotal += amount;
 
-      itemsTableRows += `
-        ${rowCounter} &
-        ${escapeLatex(item.inventory.productCode || 'N/A')} &
-        ${escapeLatex(item.inventory.productName)} &
-        ${escapeLatex(item.inventory.imageUrl ? '[Ref: Pic]' : 'No Image')} &
-        ${item.quantity} &
-        Pcs &
-        ${formatCurrency(item.unitPrice)} &
-        ${formatCurrency(amount)} \\\\
-        \\hline
-      `;
-      rowCounter++;
+        // Escape all text values
+        const productCode = escapeLatex(truncateProductCode(item.inventory.productCode || 'N/A'));
+        const productName = escapeLatex(item.inventory.productName);
+        const description = escapeLatex(item.inventory.description || '');
+        
+        itemsTableRows += `
+${rowCounter} & ${productCode} & ${productName} & ${description} & ${item.quantity} & Pcs & ${formatCurrency(item.unitPrice)} & ${formatCurrency(amount)} \\\\
+\\hline`;
+        rowCounter++;
     });
 
     // Calculate totals
@@ -147,36 +154,34 @@ export class PdfService {
     // Generate money in words
     const moneyInWords = this.numberToWords(totalAmount);
 
-    // Get current date
-    const currentDate = new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-
     // Format valid until date
     const validUntil = quotation.validUntil
-      ? new Date(quotation.validUntil).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })
-      : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString(
-          'en-GB',
-          {
+        ? new Date(quotation.validUntil).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
             year: 'numeric',
-          },
-        );
+        })
+        : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    
     const bodyContent =
-      quotation.body?.replace(/\n/g, '\\\\[5pt] ') ||
-      `Greetings from ${escapeLatex(
-        quotation.companyName,
-      )}!\\\\[5pt] Hope you are doing well.\\\\[5pt] We would like to share our quotation for the above mentioned products and services for your kind consideration. The details are given below for easy reference and kind perusal:`;
-    // LaTeX template - FIXED VERSION
+        quotation.body?.replace(/\n/g, '\\\\[5pt] ') ||
+        `Greetings from ${escapeLatex(
+            quotation.companyName,
+        )}!\\\\[5pt] Hope you are doing well.\\\\[5pt] We would like to share our quotation for the above mentioned products and services for your kind consideration. The details are given below for easy reference and kind perusal:`;
+
+    // Generate delivery terms
+    const deliveryDays = quotation.deliveryDays || 7;
+    const deliveryTerms = escapeLatex(
+        quotation.deliveryTerms || `Delivery: Within ${deliveryDays} days`
+    );
+
+    // LaTeX template
     return `\\documentclass[10pt]{article}
-\\usepackage[a4paper, margin=1in]{geometry}
+\\usepackage[a4paper, margin=0.75in]{geometry}
 \\usepackage{graphicx}
 \\usepackage{array}
 \\usepackage{longtable}
@@ -191,12 +196,29 @@ export class PdfService {
 \\usepackage{hyperref}
 \\usepackage{fontspec}
 \\usepackage{enumitem}
+\\usepackage{colortbl}
+\\usepackage{booktabs}
+\\usepackage{lipsum}
 
 % Set default font
 \\setmainfont[Path=./, Extension=.ttf, BoldFont=Comfortaa-Bold]{Comfortaa-Regular}
 
 % Color settings
 \\definecolor{companycolor}{RGB}{0, 51, 102}
+\\definecolor{tableheader}{RGB}{240, 240, 240}
+\\definecolor{tablerow}{RGB}{250, 250, 250}
+
+% Improved table column types
+\\newcolumntype{P}[1]{>{\\raggedright\\arraybackslash}p{#1}}
+\\newcolumntype{L}{>{\\raggedright\\arraybackslash}X}
+\\newcolumntype{R}{>{\\raggedleft\\arraybackslash}X}
+\\newcolumntype{C}{>{\\centering\\arraybackslash}X}
+
+% Better hyphenation
+\\hyphenpenalty=10000
+\\exhyphenpenalty=10000
+\\tolerance=1
+\\emergencystretch=\\maxdimen
 
 % Header and footer settings
 \\pagestyle{fancy}
@@ -274,12 +296,11 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
 
 \\end{minipage}
 
-\\vspace{15pt}
+\\vspace{10pt}
 
 % Quotation title and info
 \\noindent
 \\begin{minipage}[t]{0.5\\textwidth}
-\\vspace{0pt}
 \\textbf{To:}\\\\
 ${escapeLatex(quotation.contactPersonName || 'Valued Customer')}\\\\
 ${escapeLatex(quotation.companyName)}\\\\
@@ -287,86 +308,67 @@ ${escapeLatex(quotation.companyAddress)}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.45\\textwidth}
-\\vspace{0pt}
 \\raggedleft
 {\\Large\\textbf{\\textcolor{companycolor}{QUOTATION}}}\\\\[8pt]
-\\textbf{Quotation No.:} \\quotationnumber\\\\
-\\textbf{Date:} \\printdate
+\\textbf{Quotation No.:} ${escapeLatex(quotation.quotationNumber)}\\\\
+\\textbf{Date:} \\today
 \\end{minipage}
 
-\\vspace{15pt}
+\\vspace{10pt}
 
-% Subject Line
 \\noindent\\textbf{Subject:} ${escapeLatex(
-      quotation.subject || 'Quotation for Products and Services',
+        quotation.subject || 'Quotation for Products and Services',
     )}
 
 \\vspace{10pt}
 
-% Opening Salutation
 Dear ${escapeLatex(
-      quotation.contactPersonName?.split(' ')[0] || 'Sir/Madam',
+        quotation.contactPersonName?.split(' ')[0] || 'Sir/Madam',
     )},
 
 \\vspace{10pt}
 
-% Main Content
 ${bodyContent}
 
 \\vspace{15pt}
 
-% Items Table - SIMPLIFIED VERSION
-\\begin{longtable}{|c|p{2.5cm}|l|l|c|c|r|r|}
+% Items Table - SIMPLE AND ROBUST
+\\begin{center}
+\\footnotesize
+\\renewcommand{\\arraystretch}{1.4}
+\\begin{longtable}{|c|>{\\raggedright\\arraybackslash}p{2cm}|>{\\raggedright\\arraybackslash}p{3cm}|>{\\raggedright\\arraybackslash}p{3cm}|c|c|r|r|}
 \\hline
-\\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name} & \\textbf{Description/Image} & \\textbf{Qty} & \\textbf{Unit} & \\textbf{Rate (BDT)} & \\textbf{Amount (BDT)} \\\\\\hline
-\\endfirsthead
-
+\\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name} & \\textbf{Description} & \\textbf{Qty} & \\textbf{Unit} & \\textbf{Rate (BDT)} & \\textbf{Amount (BDT)} \\\\
 \\hline
-\\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name} & \\textbf{Description/Image} & \\textbf{Qty} & \\textbf{Unit} & \\textbf{Rate (BDT)} & \\textbf{Amount (BDT)} \\\\\\hline
-\\endhead
-
-\\hline
-\\multicolumn{8}{r}{\\textit{Continued on next page...}} \\\\
-\\endfoot
-
-\\endlastfoot
-
 ${itemsTableRows}
-
-\\multicolumn{7}{r}{\\textbf{Sub Total:}} & ${formatCurrency(subTotal)} \\\\\\hline
-\\multicolumn{7}{r}{\\textbf{Tax:}} & ${formatCurrency(taxAmount)} \\\\\\hline
-\\multicolumn{7}{r}{\\textbf{Total Amount:}} & \\textbf{${formatCurrency(
-      totalAmount,
-    )}} \\\\\\hline
+\\multicolumn{7}{|r|}{\\textbf{Sub Total:}} & ${formatCurrency(subTotal)} \\\\\\hline
+\\multicolumn{7}{|r|}{\\textbf{Tax:}} & ${formatCurrency(taxAmount)} \\\\\\hline
+\\multicolumn{7}{|r|}{\\textbf{Total Amount:}} & \\textbf{${formatCurrency(totalAmount)}} \\\\\\hline
 \\end{longtable}
+\\end{center}
 
 \\vspace{10pt}
 
-% Amount in Words
 \\noindent\\textbf{In Words:} ${moneyInWords}
 
 \\vspace{15pt}
 
-% Terms and Conditions
 \\noindent\\textbf{Terms \\& Conditions:}
-\\begin{itemize}[left=0pt]
+\\begin{itemize}
 \\item ${escapeLatex(
-      quotation.generalTerms || 'Price is Without VAT \\& TAX',
+        quotation.generalTerms || 'Price is Without VAT & TAX',
     )}
 \\item ${escapeLatex(
-      quotation.paymentTerms || 'Payment: 50% advance, 50% on delivery',
+        quotation.paymentTerms || 'Payment: 50% advance, 50% on delivery',
     )}
-\\item ${escapeLatex(
-      quotation.deliveryTerms || `Delivery: Within ${quotation.deliveryDays || 7} days`,
-    )}
+\\item ${deliveryTerms}
 \\item This quotation is valid until ${validUntil}
 \\item Prices are subject to change without prior notice
 \\item Goods will be supplied as per quotation
 \\end{itemize}
 
-\\vspace{20pt}
+\\vspace{15pt}
 
-% Closing Remarks
 We sincerely look forward to the opportunity of being entrusted partner of your esteemed organization to contribute in your success.
 
 Please do not hesitate to communicate for any further information or clarification. We value the possibility of building a long-term professional relationship with your esteemed organization.
@@ -375,27 +377,24 @@ Thanks in advance.
 
 \\vfill
 
-% =========================
-% Signature Section
-% =========================
-\\noindent
-\\begin{minipage}[t]{0.45\\textwidth}
+\\begin{center}
+\\begin{minipage}{0.45\\textwidth}
     \\centering
     \\vspace{1cm}
-    \\rule{8cm}{0.5pt}\\\\
+    \\rule{6cm}{0.5pt}\\\\
     Prepared by
 \\end{minipage}
 \\hfill
-\\begin{minipage}[t]{0.45\\textwidth}
+\\begin{minipage}{0.45\\textwidth}
     \\centering
     \\vspace{1cm}
-    \\rule{8cm}{0.5pt}\\\\
+    \\rule{6cm}{0.5pt}\\\\
     Approved by
 \\end{minipage}
+\\end{center}
 
 \\end{document}`;
-  }
-
+}
   /**
    * Copy necessary assets to temporary directory
    */
@@ -510,7 +509,7 @@ Thanks in advance.
         texFilePath,
       ], {
         cwd: outputDir,
-        timeout: 30000,
+        timeout: 60000,
       });
 
       // Read PDF file
