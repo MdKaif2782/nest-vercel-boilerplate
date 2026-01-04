@@ -1287,17 +1287,13 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
 
 % Status indicator under Challan title
 \\begin{flushright}
-    \\if\\challanstatus DISPATCHED
-        \\colorbox{dispatchedcolor}{\\textbf{DISPATCHED}}
-    \\else\\if\\challanstatus DELIVERED
-        \\colorbox{deliveredcolor}{\\textbf{DELIVERED}}
-    \\else\\if\\challanstatus RETURNED
-        \\colorbox{returnedcolor}{\\textbf{RETURNED}}
-    \\else\\if\\challanstatus REJECTED
-        \\colorbox{rejectedcolor}{\\textbf{REJECTED}}
-    \\else
-        \\colorbox{draftcolor}{\\textbf{DRAFT}}
-    \\fi\\fi\\fi\\fi
+    ${
+      status === 'DISPATCHED' ? '\\colorbox{dispatchedcolor}{\\textbf{DISPATCHED}}' :
+      status === 'DELIVERED' ? '\\colorbox{deliveredcolor}{\\textbf{DELIVERED}}' :
+      status === 'RETURNED' ? '\\colorbox{returnedcolor}{\\textbf{RETURNED}}' :
+      status === 'REJECTED' ? '\\colorbox{rejectedcolor}{\\textbf{REJECTED}}' :
+      '\\colorbox{draftcolor}{\\textbf{DRAFT}}'
+    }
 \\end{flushright}
 
 \\vspace{5pt}
