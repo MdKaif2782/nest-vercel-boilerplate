@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as tmp from 'tmp-promise';
-import { Bill, Quotation } from '@prisma/client';
+import { Bill, Challan, Quotation } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 
 // Interface for full quotation data with relations
@@ -63,6 +63,40 @@ export interface BillWithRelations extends Bill {
     name: string;
   };
 }
+
+// Interface for full challan data with relations
+export interface ChallanWithItems extends Challan {
+  items: Array<{
+    id: string;
+    quantity: number;
+    inventory: {
+      id: string;
+      productCode: string;
+      productName: string;
+      description?: string;
+    };
+  }>;
+  buyerPurchaseOrder: {
+    id: string;
+    poNumber: string;
+    poDate: Date;
+    bills: Array<{
+      id: string;
+      billNumber: string;
+      billDate: Date;
+      vatRegNo: string;
+      code: string;
+      vendorNo: string;
+    }>;
+    quotation: {
+      companyName: string;
+      companyAddress: string;
+      companyContact?: string;
+      contactPersonName?: string;
+    };
+  };
+}
+
 
 
 @Injectable()
@@ -936,6 +970,409 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
     \\centering
     \\rule{6cm}{0.5pt}\\\\
     {\\fontsize{9}{10}\\selectfont Prepared By: ${escapeLatex(bill.user?.name || '')}}
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\rule{6cm}{0.5pt}\\\\
+    {\\fontsize{9}{10}\\selectfont Approved By}
+\\end{minipage}
+\\end{minipage}
+
+\\vspace{20pt}
+
+% Contact information at bottom
+\\begin{center}
+    \\footnotesize
+    For any further query, please communicate with us. 24/7 Call Number \\companyphoneone\\ \\& \\companyphonetwo
+\\end{center}
+
+\\end{document}`;
+  }
+
+    /**
+   * Generate PDF for a challan using XeLaTeX
+   */
+  async generateChallanPdf(challanId: string): Promise<Buffer> {
+    // Fetch complete challan data with relations
+    const challan = await this.prisma.challan.findUnique({
+      where: { id: challanId },
+      include: {
+        items: {
+          include: {
+            inventory: {
+              select: {
+                id: true,
+                productCode: true,
+                productName: true,
+                description: true,
+              },
+            },
+          },
+        },
+        buyerPurchaseOrder: {
+          include: {
+            quotation: {
+              select: {
+                companyName: true,
+                companyAddress: true,
+                companyContact: true,
+                contactPersonName: true,
+              },
+            },
+            bills: {
+              select: {
+                id: true,
+                billNumber: true,
+                billDate: true,
+                vatRegNo: true,
+                code: true,
+                vendorNo: true,
+              },
+              orderBy: {
+                billDate: 'desc',
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    if (!challan) {
+      throw new Error(`Challan with ID ${challanId} not found`);
+    }
+
+    // Create temporary directory
+    const tmpDir = await tmp.dir({ unsafeCleanup: true });
+    
+    try {
+      // Create LaTeX content for challan
+      const latexContent = this.generateLatexChallanTemplate(challan);
+      const texFilePath = path.join(tmpDir.path, 'challan.tex');
+      
+      // Write LaTeX file
+      await fs.writeFile(texFilePath, latexContent, 'utf8');
+      
+      // Copy assets if they exist
+      await this.copyAssets(tmpDir.path);
+      
+      // Compile LaTeX to PDF using XeLaTeX
+      const pdfBuffer = await this.compileLatex(texFilePath, tmpDir.path);
+      
+      return pdfBuffer;
+    } catch (error) {
+      this.logger.error('Challan PDF generation failed:', error);
+      throw error;
+    } finally {
+      // Clean up temporary directory
+      await tmpDir.cleanup();
+    }
+  }
+
+  /**
+   * Generate LaTeX template with challan data
+   */
+  private generateLatexChallanTemplate(challan: ChallanWithItems): string {
+    // Helper function to escape LaTeX special characters
+    const escapeLatex = (text: string): string => {
+      if (!text) return '';
+      return text
+        .replace(/\\/g, '\\textbackslash{}')
+        .replace(/#/g, '\\#')
+        .replace(/\$/g, '\\$')
+        .replace(/%/g, '\\%')
+        .replace(/&/g, '\\&')
+        .replace(/_/g, '\\_')
+        .replace(/{/g, '\\{')
+        .replace(/}/g, '\\}')
+        .replace(/~/g, '\\textasciitilde{}')
+        .replace(/\^/g, '\\textasciicircum{}')
+        .replace(/</g, '\\textless{}')
+        .replace(/>/g, '\\textgreater{}')
+        .replace(/\n/g, '\\\\');
+    };
+
+    // Format date
+    const formatDate = (date: Date): string => {
+      return new Date(date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    };
+
+    // Truncate product code
+    const truncateProductCode = (code: string, maxLength: number = 20): string => {
+      if (!code || code.length <= maxLength) return code;
+      const firstPart = code.substring(0, 8);
+      const lastPart = code.substring(code.length - 3);
+      return `${firstPart}…${lastPart}`;
+    };
+
+    // Generate items table rows
+    let itemsTableRows = '';
+    let rowCounter = 1;
+    let totalQuantity = 0;
+
+    challan.items.forEach((item) => {
+      const itemDescription = escapeLatex(
+        item.inventory.description || item.inventory.productName
+      );
+      const itemCode = escapeLatex(truncateProductCode(item.inventory.productCode || 'N/A'));
+      totalQuantity += item.quantity;
+      
+      itemsTableRows += `
+${rowCounter} & ${itemCode} & ${itemDescription} & ${item.quantity} & Pcs \\\\
+\\hline`;
+      rowCounter++;
+    });
+
+    // Get company details from quotation
+    const companyName = challan.buyerPurchaseOrder?.quotation?.companyName || 'Customer';
+    const companyAddress = challan.buyerPurchaseOrder?.quotation?.companyAddress || 'Address not specified';
+    const contactPerson = challan.buyerPurchaseOrder?.quotation?.contactPersonName || 'Contact Person';
+    const companyContact = challan.buyerPurchaseOrder?.quotation?.companyContact || 'N/A';
+
+    // Get related invoice number (from latest bill)
+    const latestBill = challan.buyerPurchaseOrder?.bills?.[0];
+    const invoiceNo = latestBill ? latestBill.billNumber : 'N/A';
+    const invoiceDate = latestBill ? formatDate(latestBill.billDate) : 'N/A';
+    const vatRegNo = latestBill?.vatRegNo || 'N/A';
+    const code = latestBill?.code || 'N/A';
+    const vendorNo = latestBill?.vendorNo || 'N/A';
+
+    // Split address into two lines if needed
+    const addressLines = companyAddress.split(',').map(line => line.trim());
+    const addressLine1 = addressLines[0] || '';
+    const addressLine2 = addressLines.slice(1).join(', ') || '';
+
+    // Get challan status for display
+    const status = challan.status;
+    let statusColor = 'gray';
+    let statusText = status;
+    
+    switch(status) {
+      case 'DISPATCHED':
+        statusColor = 'blue';
+        break;
+      case 'DELIVERED':
+        statusColor = 'green';
+        break;
+      case 'RETURNED':
+        statusColor = 'red';
+        break;
+      case 'REJECTED':
+        statusColor = 'red';
+        break;
+      default:
+        statusColor = 'gray';
+    }
+
+    // LaTeX template for challan
+    return `\\documentclass[8pt]{article}
+\\usepackage[a4paper, margin=1in]{geometry}
+\\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{longtable}
+\\usepackage{multirow}
+\\usepackage{fancyhdr}
+\\usepackage{lastpage}
+\\usepackage{tabularx}
+\\usepackage{ragged2e}
+\\usepackage{calc}
+\\usepackage{datetime}
+\\usepackage{xcolor}
+\\usepackage{hyperref}
+\\usepackage{fontspec}
+
+% Set Comfortaa font
+\\setmainfont{Comfortaa}[
+    Path = ./,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    Scale = 0.9
+]
+
+% Color settings
+\\definecolor{companycolor}{RGB}{0, 51, 102}
+\\definecolor{dispatchedcolor}{RGB}{33, 150, 243}    % Blue for DISPATCHED
+\\definecolor{deliveredcolor}{RGB}{76, 175, 80}      % Green for DELIVERED
+\\definecolor{returnedcolor}{RGB}{244, 67, 54}       % Red for RETURNED
+\\definecolor{rejectedcolor}{RGB}{244, 67, 54}       % Red for REJECTED
+\\definecolor{draftcolor}{RGB}{158, 158, 158}        % Gray for DRAFT
+
+% Header and footer settings
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\fancyfoot[C]{\\footnotesize Page \\thepage\\ of \\pageref{LastPage}}
+
+% Custom commands
+\\newcommand{\\challantitle}{Challan}
+\\newcommand{\\companyname}{Genuine Stationers \\& Gift Corner}
+\\newcommand{\\companyaddress}{1/17/B Sikdar Real Estate, Road-6, Dhanmondi, Dhaka-1229}
+\\newcommand{\\companyphoneone}{+8801711560963}
+\\newcommand{\\companyphonetwo}{+8801971560963}
+\\newcommand{\\companylandline}{+88 02 9114774}
+\\newcommand{\\companyemailone}{gsgcreza@gmail.com}
+\\newcommand{\\companyemailtwo}{gsmreza87@yahoo.com}
+
+% Status command
+\\newcommand{\\challanstatus}{${status}}
+
+\\begin{document}
+
+% =========================
+% Company Header
+% =========================
+\\noindent
+\\begin{minipage}[t]{\\textwidth}
+\\vspace{0pt}
+
+% -------------------------
+% Left: Logo (fixed height)
+% -------------------------
+\\begin{minipage}[t]{0.35\\textwidth}
+\\vspace{0pt}
+\\includegraphics[width=0.8\\linewidth]{logo.jpg}
+\\end{minipage}
+\\hfill
+% -------------------------
+% Right: Name (top) + Details + QR
+% -------------------------
+\\begin{minipage}[t]{0.6\\textwidth}
+\\vspace{0pt}
+
+% Company Name (same level as logo)
+{\\raggedleft
+\\fontsize{16}{18}\\selectfont
+\\textbf{\\textcolor{companycolor}{\\companyname}}
+\\par}
+
+\\vspace{4pt} % tight spacing under name
+
+% -------- Text + QR row --------
+\\noindent
+\\begin{minipage}[t]{0.72\\linewidth}
+\\vspace{0pt}
+\\raggedleft
+\\fontsize{7}{8}\\selectfont
+\\linespread{1}\\selectfont
+
+\\companyaddress\\\\[2pt]
+Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
+\\companylandline\\\\[2pt]
+\\companyemailone\\\\[2pt]
+\\companyemailtwo
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.19\\linewidth}
+\\vspace{0pt}
+\\raggedleft
+\\includegraphics[width=\\linewidth]{qr.jpg}
+\\end{minipage}
+
+\\end{minipage}
+
+\\end{minipage}
+
+\\vspace{20pt}
+
+% Challan title on top right
+\\begin{flushright}
+    {\\fontsize{16}{19.2}\\selectfont \\textbf{\\textcolor{companycolor}{\\challantitle}}}
+\\end{flushright}
+
+% Status indicator under Challan title
+\\begin{flushright}
+    \\if\\challanstatus DISPATCHED
+        \\colorbox{dispatchedcolor}{\\textbf{DISPATCHED}}
+    \\else\\if\\challanstatus DELIVERED
+        \\colorbox{deliveredcolor}{\\textbf{DELIVERED}}
+    \\else\\if\\challanstatus RETURNED
+        \\colorbox{returnedcolor}{\\textbf{RETURNED}}
+    \\else\\if\\challanstatus REJECTED
+        \\colorbox{rejectedcolor}{\\textbf{REJECTED}}
+    \\else
+        \\colorbox{draftcolor}{\\textbf{DRAFT}}
+    \\fi\\fi\\fi\\fi
+\\end{flushright}
+
+\\vspace{5pt}
+
+% Challan header information (two-column layout)
+\\begin{tabularx}{\\textwidth}{@{}Xr@{}}
+    \\textbf{Challan No.:} ${escapeLatex(challan.challanNumber)} & \\textbf{VAT Reg. No.:} ${escapeLatex(vatRegNo)} \\\\
+    \\textbf{Customer Name:} \\textbf{${escapeLatex(companyName)}} & \\textbf{Code:} ${escapeLatex(code)} \\\\
+    \\textbf{Address:} ${escapeLatex(addressLine1)} & \\textbf{Vendor ID:} ${escapeLatex(vendorNo)} \\\\
+    \\hspace{2.5cm} ${escapeLatex(addressLine2)} & \\textbf{Purchase Order No.:} ${escapeLatex(challan.buyerPurchaseOrder?.poNumber || 'N/A')} \\\\
+    \\textbf{Phone:} ${escapeLatex(companyContact)} & \\textbf{Purchase Order Date:} ${challan.buyerPurchaseOrder?.poDate ? formatDate(challan.buyerPurchaseOrder.poDate) : 'N/A'} \\\\
+    \\textbf{Date:} ${challan.dispatchDate ? formatDate(challan.dispatchDate) : formatDate(challan.createdAt)} & \\textbf{Invoice No.:} ${escapeLatex(invoiceNo)} \\\\
+    & \\textbf{Print Date:} \\today \\\\
+\\end{tabularx}
+
+\\vspace{15pt}
+
+% Items Table
+\\begin{longtable}{|p{0.5cm}|p{2.5cm}|p{6cm}|p{2cm}|p{1.5cm}|}
+    \\hline
+    \\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name \\& Description} & \\textbf{Quantity} & \\textbf{Unit} \\\\
+    \\hline
+    \\endfirsthead
+    
+    \\hline
+    \\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name \\& Description} & \\textbf{Quantity} & \\textbf{Unit} \\\\
+    \\hline
+    \\endhead
+    
+    \\hline
+    \\multicolumn{5}{c}{\\textit{Continued on next page...}} \\\\
+    \\endfoot
+    
+    \\hline
+    \\endlastfoot
+    
+    ${itemsTableRows}
+    
+    % Summary Row
+    \\multicolumn{3}{|r|}{\\textbf{Total Quantity:}} & \\textbf{${totalQuantity}} & \\textbf{Pcs} \\\\
+    \\hline
+\\end{longtable}
+
+\\vspace{15pt}
+
+% Delivery Information
+\\noindent
+\\begin{minipage}[t]{0.48\\textwidth}
+    \\textbf{Dispatch Date:} ${challan.dispatchDate ? formatDate(challan.dispatchDate) : 'To be dispatched'} \\\\
+    \\textbf{Delivery Date:} ${challan.deliveryDate ? formatDate(challan.deliveryDate) : 'To be delivered'}
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.48\\textwidth}
+    \\raggedleft
+    \\textbf{Total Items:} ${challan.items.length} \\\\
+    \\textbf{Total Quantity:} ${totalQuantity} Pcs
+\\end{minipage}
+
+\\vspace{20pt}
+
+% Note about system generated copy
+\\begin{center}
+    \\textbf{*** This is system generated copy, no signature required ***}
+\\end{center}
+
+\\vspace{15pt}
+\\vfill
+
+% Signature Section
+\\noindent
+\\begin{minipage}[t]{\\textwidth}
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\rule{6cm}{0.5pt}\\\\
+    {\\fontsize{9}{10}\\selectfont Prepared By}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.45\\textwidth}

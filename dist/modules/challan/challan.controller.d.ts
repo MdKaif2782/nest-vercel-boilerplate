@@ -1,5 +1,6 @@
 import { ChallanService } from './challan.service';
 import { CreateChallanDto, UpdateChallanStatusDto, DispatchBPODto } from './dto';
+import { Response } from 'express';
 export declare class ChallanController {
     private readonly challanService;
     constructor(challanService: ChallanService);
@@ -37,15 +38,15 @@ export declare class ChallanController {
             quotation: {
                 id: string;
                 createdAt: Date;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                totalAmount: number;
-                taxAmount: number;
                 quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
                 deliveryTerms: string | null;
                 deliveryDays: number | null;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
                 moneyInWords: string | null;
                 validUntil: Date | null;
                 contactPersonName: string | null;
@@ -57,12 +58,12 @@ export declare class ChallanController {
             };
         } & {
             id: string;
-            createdAt: Date;
             poNumber: string;
             poDate: Date;
             dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
+            createdAt: Date;
             quotationId: string;
         };
         items: ({
@@ -70,17 +71,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -91,11 +92,11 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     }>;
     getChallansByBPO(bpoId: string): Promise<({
@@ -104,17 +105,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -125,11 +126,11 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     })[]>;
     getAllChallans(): Promise<({
@@ -137,27 +138,27 @@ export declare class ChallanController {
             quotation: {
                 items: {
                     id: string;
+                    quotationId: string;
                     quantity: number;
+                    mrp: number;
                     unitPrice: number;
+                    packagePrice: number;
                     taxPercentage: number | null;
                     totalPrice: number;
                     inventoryId: string;
-                    quotationId: string;
-                    mrp: number;
-                    packagePrice: number;
                 }[];
             } & {
                 id: string;
                 createdAt: Date;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                totalAmount: number;
-                taxAmount: number;
                 quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
                 deliveryTerms: string | null;
                 deliveryDays: number | null;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
                 moneyInWords: string | null;
                 validUntil: Date | null;
                 contactPersonName: string | null;
@@ -169,12 +170,12 @@ export declare class ChallanController {
             };
         } & {
             id: string;
-            createdAt: Date;
             poNumber: string;
             poDate: Date;
             dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
+            createdAt: Date;
             quotationId: string;
         };
         items: ({
@@ -182,17 +183,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -203,11 +204,11 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     })[]>;
     createChallan(dto: CreateChallanDto): Promise<{
@@ -215,15 +216,15 @@ export declare class ChallanController {
             quotation: {
                 id: string;
                 createdAt: Date;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                totalAmount: number;
-                taxAmount: number;
                 quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
                 deliveryTerms: string | null;
                 deliveryDays: number | null;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
                 moneyInWords: string | null;
                 validUntil: Date | null;
                 contactPersonName: string | null;
@@ -235,12 +236,12 @@ export declare class ChallanController {
             };
         } & {
             id: string;
-            createdAt: Date;
             poNumber: string;
             poDate: Date;
             dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
+            createdAt: Date;
             quotationId: string;
         };
         items: ({
@@ -248,17 +249,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -269,11 +270,11 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     }>;
     getChallanById(id: string): Promise<{
@@ -284,41 +285,41 @@ export declare class ChallanController {
                         id: string;
                         createdAt: Date;
                         updatedAt: Date;
-                        purchaseOrderId: string;
-                        description: string | null;
-                        productName: string;
                         quantity: number;
                         productCode: string;
                         barcode: string | null;
+                        productName: string;
                         imageUrl: string | null;
+                        description: string | null;
                         purchasePrice: number;
                         expectedSalePrice: number;
                         minStockLevel: number | null;
                         maxStockLevel: number | null;
+                        purchaseOrderId: string;
                     };
                 } & {
                     id: string;
+                    quotationId: string;
                     quantity: number;
+                    mrp: number;
                     unitPrice: number;
+                    packagePrice: number;
                     taxPercentage: number | null;
                     totalPrice: number;
                     inventoryId: string;
-                    quotationId: string;
-                    mrp: number;
-                    packagePrice: number;
                 })[];
             } & {
                 id: string;
                 createdAt: Date;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                totalAmount: number;
-                taxAmount: number;
                 quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
                 deliveryTerms: string | null;
                 deliveryDays: number | null;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
                 moneyInWords: string | null;
                 validUntil: Date | null;
                 contactPersonName: string | null;
@@ -330,12 +331,12 @@ export declare class ChallanController {
             };
         } & {
             id: string;
-            createdAt: Date;
             poNumber: string;
             poDate: Date;
             dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
+            createdAt: Date;
             quotationId: string;
         };
         items: ({
@@ -343,17 +344,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -364,27 +365,28 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     }>;
+    getPdf(id: string, res: Response): Promise<void>;
     updateChallanStatus(id: string, dto: UpdateChallanStatusDto): Promise<{
         buyerPurchaseOrder: {
             quotation: {
                 id: string;
                 createdAt: Date;
-                status: import(".prisma/client").$Enums.QuotationStatus;
-                totalAmount: number;
-                taxAmount: number;
                 quotationNumber: string;
                 companyName: string;
                 companyAddress: string;
                 companyContact: string | null;
                 deliveryTerms: string | null;
                 deliveryDays: number | null;
+                status: import(".prisma/client").$Enums.QuotationStatus;
+                totalAmount: number;
+                taxAmount: number;
                 moneyInWords: string | null;
                 validUntil: Date | null;
                 contactPersonName: string | null;
@@ -396,12 +398,12 @@ export declare class ChallanController {
             };
         } & {
             id: string;
-            createdAt: Date;
             poNumber: string;
             poDate: Date;
             dispatchedQuantity: number;
             pdfUrl: string | null;
             externalUrl: string | null;
+            createdAt: Date;
             quotationId: string;
         };
         items: ({
@@ -409,17 +411,17 @@ export declare class ChallanController {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                purchaseOrderId: string;
-                description: string | null;
-                productName: string;
                 quantity: number;
                 productCode: string;
                 barcode: string | null;
+                productName: string;
                 imageUrl: string | null;
+                description: string | null;
                 purchasePrice: number;
                 expectedSalePrice: number;
                 minStockLevel: number | null;
                 maxStockLevel: number | null;
+                purchaseOrderId: string;
             };
         } & {
             id: string;
@@ -430,11 +432,11 @@ export declare class ChallanController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         status: import(".prisma/client").$Enums.ChallanStatus;
         challanNumber: string;
         dispatchDate: Date | null;
         deliveryDate: Date | null;
+        updatedAt: Date;
         buyerPurchaseOrderId: string;
     }>;
 }

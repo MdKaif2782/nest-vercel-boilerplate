@@ -10,11 +10,13 @@ exports.ChallanModule = void 0;
 const common_1 = require("@nestjs/common");
 const challan_service_1 = require("./challan.service");
 const challan_controller_1 = require("./challan.controller");
+const pdf_module_1 = require("../pdf/pdf.module");
 let ChallanModule = class ChallanModule {
 };
 exports.ChallanModule = ChallanModule;
 exports.ChallanModule = ChallanModule = __decorate([
     (0, common_1.Module)({
+        imports: [pdf_module_1.PdfModule],
         controllers: [challan_controller_1.ChallanController],
         providers: [challan_service_1.ChallanService],
     })

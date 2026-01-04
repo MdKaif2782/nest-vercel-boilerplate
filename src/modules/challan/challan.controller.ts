@@ -1,21 +1,24 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Body, 
-  Param
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Res,
+  HttpStatus
 } from '@nestjs/common';
 import { ChallanService } from './challan.service';
-import { 
-  CreateChallanDto, 
-  UpdateChallanStatusDto, 
-  DispatchBPODto 
+import {
+  CreateChallanDto,
+  UpdateChallanStatusDto,
+  DispatchBPODto
 } from './dto';
+import { Response } from 'express';
 
 @Controller('challans')
 export class ChallanController {
-  constructor(private readonly challanService: ChallanService) {}
+  constructor(private readonly challanService: ChallanService) { }
 
   // ---------- STATIC ROUTES ----------
   @Get('pending-bpos')
@@ -53,6 +56,28 @@ export class ChallanController {
   @Get(':id')
   async getChallanById(@Param('id') id: string) {
     return this.challanService.getChallanById(id);
+  }
+
+  @Get(':id/pdf')
+  async getPdf(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const pdfBuffer = await this.challanService.generatePdf(id);
+
+      // Set headers for PDF download
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+
+      // Send PDF
+      res.status(HttpStatus.OK).send(pdfBuffer);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate PDF',
+        error: error.message,
+      });
+    }
   }
 
   @Put(':id/status')

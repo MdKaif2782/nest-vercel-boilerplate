@@ -1,4 +1,4 @@
-import { Bill, Quotation } from '@prisma/client';
+import { Bill, Challan, Quotation } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 export interface QuotationWithItems extends Quotation {
     items: Array<{
@@ -55,6 +55,37 @@ export interface BillWithRelations extends Bill {
         name: string;
     };
 }
+export interface ChallanWithItems extends Challan {
+    items: Array<{
+        id: string;
+        quantity: number;
+        inventory: {
+            id: string;
+            productCode: string;
+            productName: string;
+            description?: string;
+        };
+    }>;
+    buyerPurchaseOrder: {
+        id: string;
+        poNumber: string;
+        poDate: Date;
+        bills: Array<{
+            id: string;
+            billNumber: string;
+            billDate: Date;
+            vatRegNo: string;
+            code: string;
+            vendorNo: string;
+        }>;
+        quotation: {
+            companyName: string;
+            companyAddress: string;
+            companyContact?: string;
+            contactPersonName?: string;
+        };
+    };
+}
 export declare class PdfService {
     private readonly prisma;
     private readonly logger;
@@ -66,6 +97,8 @@ export declare class PdfService {
     private compileLatex;
     generateBillPdf(billId: string): Promise<Buffer>;
     private generateLatexBillTemplate;
+    generateChallanPdf(challanId: string): Promise<Buffer>;
+    private generateLatexChallanTemplate;
     private numberToWords;
     private convertCrore;
     private convertLakh;

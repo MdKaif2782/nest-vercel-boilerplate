@@ -7,10 +7,11 @@ import {
 } from './dto';
 import { ChallanStatus } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class ChallanService {
-  constructor(private prisma: DatabaseService) {}
+  constructor(private prisma: DatabaseService, private readonly pdfService:PdfService) {}
 
   // Helper to calculate total quantity from quotation items
   private calculateTotalQuantity(quotation: any): number {
@@ -210,6 +211,22 @@ export class ChallanService {
 
       return challan;
     });
+  }
+
+  async generatePdf(quotationId: string): Promise<Buffer> {
+    // Check if quotation exists
+    const quotation = await this.prisma.challan.findUnique({
+      where: { id: quotationId },
+    });
+
+    if (!quotation) {
+      throw new NotFoundException(`Challan with ID ${quotationId} not found`);
+    }
+
+    // Generate PDF
+    const pdfBuffer = await this.pdfService.generateChallanPdf(quotationId);
+    
+    return pdfBuffer;
   }
 
   // Mark BPO as dispatched (creates challan automatically)

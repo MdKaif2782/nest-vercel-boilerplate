@@ -12,9 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChallanService = void 0;
 const common_1 = require("@nestjs/common");
 const database_service_1 = require("../database/database.service");
+const pdf_service_1 = require("../pdf/pdf.service");
 let ChallanService = class ChallanService {
-    constructor(prisma) {
+    constructor(prisma, pdfService) {
         this.prisma = prisma;
+        this.pdfService = pdfService;
     }
     calculateTotalQuantity(quotation) {
         return quotation?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -173,6 +175,16 @@ let ChallanService = class ChallanService {
             });
             return challan;
         });
+    }
+    async generatePdf(quotationId) {
+        const quotation = await this.prisma.challan.findUnique({
+            where: { id: quotationId },
+        });
+        if (!quotation) {
+            throw new common_1.NotFoundException(`Challan with ID ${quotationId} not found`);
+        }
+        const pdfBuffer = await this.pdfService.generateChallanPdf(quotationId);
+        return pdfBuffer;
     }
     async markAsDispatched(dto) {
         const bpo = await this.prisma.buyerPurchaseOrder.findUnique({
@@ -454,6 +466,6 @@ let ChallanService = class ChallanService {
 exports.ChallanService = ChallanService;
 exports.ChallanService = ChallanService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [database_service_1.DatabaseService])
+    __metadata("design:paramtypes", [database_service_1.DatabaseService, pdf_service_1.PdfService])
 ], ChallanService);
 //# sourceMappingURL=challan.service.js.map
