@@ -10,11 +10,13 @@ exports.BillModule = void 0;
 const common_1 = require("@nestjs/common");
 const bill_service_1 = require("./bill.service");
 const bill_controller_1 = require("./bill.controller");
+const pdf_module_1 = require("../pdf/pdf.module");
 let BillModule = class BillModule {
 };
 exports.BillModule = BillModule;
 exports.BillModule = BillModule = __decorate([
     (0, common_1.Module)({
+        imports: [pdf_module_1.PdfModule],
         controllers: [bill_controller_1.BillController],
         providers: [bill_service_1.BillService],
     })

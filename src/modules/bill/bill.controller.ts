@@ -13,22 +13,23 @@ import {
   HttpStatus,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
 import { BillService } from './bill.service';
 import { BillSearchDto, AddPaymentDto, CreateBillDto } from './dto';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AccessTokenGuard } from '../auth/auth.guard';
 
 @Controller('bills')
 export class BillController {
-  constructor(private readonly billService: BillService) {}
+  constructor(private readonly billService: BillService) { }
 
   @Post()
   @UseGuards(AccessTokenGuard)
   async create(
     @Req() req: Request,
     @Body(ValidationPipe) createBillDto: CreateBillDto) {
-    const request = req as any as {user:{id:string}};
+    const request = req as any as { user: { id: string } };
     return await this.billService.create(createBillDto, request.user.id);
   }
 
@@ -62,6 +63,28 @@ export class BillController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.billService.findOne(id);
+  }
+
+  @Get(':id/pdf')
+  async getPdf(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const pdfBuffer = await this.billService.generatePdf(id);
+
+      // Set headers for PDF download
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+
+      // Send PDF
+      res.status(HttpStatus.OK).send(pdfBuffer);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate PDF',
+        error: error.message,
+      });
+    }
   }
 
   @Post(':id/payments')

@@ -68,7 +68,7 @@ let PdfService = PdfService_1 = class PdfService {
         }
         const tmpDir = await tmp.dir({ unsafeCleanup: true });
         try {
-            const latexContent = this.generateLatexTemplate(quotation);
+            const latexContent = this.generateLatexQuotationTemplate(quotation);
             console.log(latexContent);
             const texFilePath = path.join(tmpDir.path, 'quotation.tex');
             await fs.writeFile(texFilePath, latexContent, 'utf8');
@@ -84,7 +84,7 @@ let PdfService = PdfService_1 = class PdfService {
             await tmpDir.cleanup();
         }
     }
-    generateLatexTemplate(quotation) {
+    generateLatexQuotationTemplate(quotation) {
         const escapeLatex = (text) => {
             if (!text)
                 return '';
@@ -460,6 +460,341 @@ Thanks in advance.
             }
             throw new Error(`LaTeX compilation failed: ${error.message}`);
         }
+    }
+    async generateBillPdf(billId) {
+        const bill = await this.prisma.bill.findUnique({
+            where: { id: billId },
+            include: {
+                items: {
+                    include: {
+                        inventory: {
+                            select: {
+                                id: true,
+                                productCode: true,
+                                productName: true,
+                                description: true,
+                            },
+                        },
+                    },
+                },
+                payments: {
+                    orderBy: {
+                        paymentDate: 'desc',
+                    },
+                },
+                buyerPO: {
+                    include: {
+                        quotation: {
+                            select: {
+                                companyName: true,
+                                companyAddress: true,
+                                companyContact: true,
+                                contactPersonName: true,
+                            },
+                        },
+                    },
+                },
+                user: {
+                    select: {
+                        name: true,
+                    },
+                },
+            },
+        });
+        if (!bill) {
+            throw new Error(`Bill with ID ${billId} not found`);
+        }
+        const totalPaid = bill.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const billDue = bill.totalAmount - totalPaid;
+        const status = billDue <= 0 ? 'PAID' : 'DUE';
+        console.log(billDue);
+        console.log(status);
+        const tmpDir = await tmp.dir({ unsafeCleanup: true });
+        try {
+            const latexContent = this.generateLatexBillTemplate(bill, totalPaid, billDue, status);
+            const texFilePath = path.join(tmpDir.path, 'bill.tex');
+            await fs.writeFile(texFilePath, latexContent, 'utf8');
+            await this.copyAssets(tmpDir.path);
+            const pdfBuffer = await this.compileLatex(texFilePath, tmpDir.path);
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Bill PDF generation failed:', error);
+            throw error;
+        }
+        finally {
+            await tmpDir.cleanup();
+        }
+    }
+    generateLatexBillTemplate(bill, totalPaid, billDue, status) {
+        const escapeLatex = (text) => {
+            if (!text)
+                return '';
+            return text
+                .replace(/\\/g, '\\textbackslash{}')
+                .replace(/#/g, '\\#')
+                .replace(/\$/g, '\\$')
+                .replace(/%/g, '\\%')
+                .replace(/&/g, '\\&')
+                .replace(/_/g, '\\_')
+                .replace(/{/g, '\\{')
+                .replace(/}/g, '\\}')
+                .replace(/~/g, '\\textasciitilde{}')
+                .replace(/\^/g, '\\textasciicircum{}')
+                .replace(/</g, '\\textless{}')
+                .replace(/>/g, '\\textgreater{}')
+                .replace(/\n/g, '\\\\');
+        };
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(amount);
+        };
+        const formatDate = (date) => {
+            return new Date(date).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            });
+        };
+        const truncateProductCode = (code, maxLength = 20) => {
+            if (!code || code.length <= maxLength)
+                return code;
+            const firstPart = code.substring(0, 8);
+            const lastPart = code.substring(code.length - 3);
+            return `${firstPart}…${lastPart}`;
+        };
+        let itemsTableRows = '';
+        let rowCounter = 1;
+        bill.items.forEach((item) => {
+            const productDescription = escapeLatex(item.productDescription || item.inventory.productName);
+            const itemCode = escapeLatex(truncateProductCode(item.inventory.productCode || 'N/A'));
+            itemsTableRows += `
+${rowCounter} & ${itemCode} & ${productDescription} & ${item.quantity} & Pcs & ${formatCurrency(item.unitPrice)} & ${formatCurrency(item.totalPrice)} \\\\
+\\hline`;
+            rowCounter++;
+        });
+        const moneyInWords = this.numberToWords(bill.totalAmount);
+        const latestPayment = bill.payments.length > 0 ? bill.payments[0] : null;
+        const paymentHistory = latestPayment
+            ? `Last Payment: ${formatCurrency(latestPayment.amount)} on ${formatDate(latestPayment.paymentDate)}`
+            : 'No payments recorded';
+        const previousDue = 0;
+        const companyName = bill.buyerPO?.quotation?.companyName || 'Customer';
+        const companyAddress = bill.buyerPO?.quotation?.companyAddress || 'Address not specified';
+        const contactPerson = bill.buyerPO?.quotation?.contactPersonName || 'Contact Person';
+        const companyContact = bill.buyerPO?.quotation?.companyContact || 'N/A';
+        return `\\documentclass[8pt]{article}
+\\usepackage[a4paper, margin=1in]{geometry}
+\\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{longtable}
+\\usepackage{multirow}
+\\usepackage{fancyhdr}
+\\usepackage{lastpage}
+\\usepackage{tabularx}
+\\usepackage{ragged2e}
+\\usepackage{calc}
+\\usepackage{datetime}
+\\usepackage{xcolor}
+\\usepackage{hyperref}
+\\usepackage{fontspec}
+
+% Set Comfortaa font
+\\setmainfont{Comfortaa}[
+    Path = ./,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    Scale = 0.9
+]
+
+% Color settings
+\\definecolor{companycolor}{RGB}{0, 51, 102}
+\\definecolor{paidcolor}{RGB}{76, 175, 80}    % Green for PAID
+\\definecolor{duecolor}{RGB}{255, 235, 59}    % Yellow for DUE
+
+% Header and footer settings
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\fancyfoot[C]{\\footnotesize Page \\thepage\\ of \\pageref{LastPage}}
+
+% Custom commands
+\\newcommand{\\invoicetitle}{Invoice}
+\\newcommand{\\companyname}{Genuine Stationers \\& Gift Corner}
+\\newcommand{\\companyaddress}{1/17/B Sikdar Real Estate, Road-6, Dhanmondi, Dhaka-1229}
+\\newcommand{\\companyphoneone}{+8801711560963}
+\\newcommand{\\companyphonetwo}{+8801971560963}
+\\newcommand{\\companylandline}{+88 02 9114774}
+\\newcommand{\\companyemailone}{gsgcreza@gmail.com}
+\\newcommand{\\companyemailtwo}{gsmreza87@yahoo.com}
+
+% Status command (PAID/DUE)
+\\newcommand{\\invoicestatus}{${status}}
+
+\\begin{document}
+
+% =========================
+% Company Header
+% =========================
+\\noindent
+\\begin{minipage}[t]{\\textwidth}
+\\vspace{0pt}
+
+% -------------------------
+% Left: Logo (fixed height)
+% -------------------------
+\\begin{minipage}[t]{0.35\\textwidth}
+\\vspace{0pt}
+\\includegraphics[width=0.8\\linewidth]{logo.jpg}
+\\end{minipage}
+\\hfill
+% -------------------------
+% Right: Name (top) + Details + QR
+% -------------------------
+\\begin{minipage}[t]{0.6\\textwidth}
+\\vspace{0pt}
+
+% Company Name (same level as logo)
+{\\raggedleft
+\\fontsize{16}{18}\\selectfont
+\\textbf{\\textcolor{companycolor}{\\companyname}}
+\\par}
+
+\\vspace{4pt} % tight spacing under name
+
+% -------- Text + QR row --------
+\\noindent
+\\begin{minipage}[t]{0.72\\linewidth}
+\\vspace{0pt}
+\\raggedleft
+\\fontsize{7}{8}\\selectfont
+\\linespread{1}\\selectfont
+
+\\companyaddress\\\\[2pt]
+Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
+\\companylandline\\\\[2pt]
+\\companyemailone\\\\[2pt]
+\\companyemailtwo
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.19\\linewidth}
+\\vspace{0pt}
+\\raggedleft
+\\includegraphics[width=\\linewidth]{qr.jpg}
+\\end{minipage}
+
+\\end{minipage}
+
+\\end{minipage}
+
+\\vspace{20pt}
+
+% Invoice title on top right
+\\begin{flushright}
+    {\\fontsize{16}{19.2}\\selectfont \\textbf{\\textcolor{companycolor}{\\invoicetitle}}}
+\\end{flushright}
+
+% Status indicator under Invoice title
+\\begin{flushright}
+    ${status === 'PAID' ? '\\colorbox{paidcolor}{\\textbf{PAID}}' : '\\colorbox{duecolor}{\\textbf{DUE}}'}
+\\end{flushright}
+
+\\vspace{5pt}
+
+% Invoice header information (two-column layout)
+\\begin{tabularx}{\\textwidth}{@{}Xr@{}}
+    \\textbf{Invoice No.:} ${escapeLatex(bill.billNumber)} & \\textbf{VAT Reg. No.:} ${escapeLatex(bill.vatRegNo || 'N/A')} \\\\
+    \\textbf{Customer Name:} \\textbf{${escapeLatex(companyName)}} & \\textbf{Code:} ${escapeLatex(bill.code || 'N/A')} \\\\
+    \\textbf{Address:} ${escapeLatex(companyAddress)} & \\textbf{Vendor ID:} ${escapeLatex(bill.vendorNo || 'N/A')} \\\\
+    \\hspace{2.5cm} ${escapeLatex(contactPerson)} & \\textbf{Purchase Order No.:} ${escapeLatex(bill.buyerPO?.poNumber || 'N/A')} \\\\
+    \\textbf{Phone:} ${escapeLatex(companyContact)} & \\textbf{Purchase Order Date:} ${bill.buyerPO?.poDate ? formatDate(bill.buyerPO.poDate) : 'N/A'} \\\\
+    \\textbf{Date:} ${formatDate(bill.billDate)} & \\textbf{Chalan No.:} [To be filled] \\\\
+    & \\textbf{Print Date:} \\today \\\\
+\\end{tabularx}
+
+\\vspace{15pt}
+
+% Items Table
+\\begin{longtable}{|p{0.3cm}|p{2.5cm}|p{4.5cm}|p{1.2cm}|p{1cm}|p{1.8cm}|p{2.5cm}|}
+    \\hline
+    \\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name \\& Description} & \\textbf{Quantity} & \\textbf{Unit} & \\textbf{Rate (BDT)} & \\textbf{Amount (BDT)} \\\\
+    \\hline
+    \\endfirsthead
+    
+    \\hline
+    \\textbf{Sl.} & \\textbf{Item Code} & \\textbf{Item Name \\& Description} & \\textbf{Quantity} & \\textbf{Unit} & \\textbf{Rate (BDT)} & \\textbf{Amount (BDT)} \\\\
+    \\hline
+    \\endhead
+    
+    \\hline
+    \\multicolumn{7}{c}{\\textit{Continued on next page...}} \\\\
+    \\endfoot
+    
+    \\hline
+    \\endlastfoot
+    
+    ${itemsTableRows}
+    
+    % Total Row
+    \\multicolumn{6}{r}{\\textbf{Total Amount:}} & \\textbf{${formatCurrency(bill.totalAmount)}} \\\\
+    \\hline
+\\end{longtable}
+
+\\vspace{10pt}
+
+% Amount in Words and Payment Summary
+\\begin{tabularx}{\\textwidth}{@{}Xr@{}}
+    \\textbf{In Words:} ${escapeLatex(moneyInWords)} & \\textbf{Total Amount:} ${formatCurrency(bill.totalAmount)} \\\\
+    & \\textbf{Paid Amount:} ${formatCurrency(totalPaid)} \\\\
+    & \\textbf{Bill Due:} ${formatCurrency(billDue)} \\\\
+    & \\textbf{Previous Due:} ${formatCurrency(previousDue)} \\\\
+    & \\textbf{Total Due:} ${formatCurrency(billDue + previousDue)} \\\\
+\\end{tabularx}
+
+\\vspace{5pt}
+
+% Payment History
+\\begin{tabularx}{\\textwidth}{@{}X@{}}
+    \\small \\textbf{Payment History:} ${escapeLatex(paymentHistory)} \\\\
+\\end{tabularx}
+
+\\vspace{10pt}
+
+% Note about system generated copy
+\\begin{center}
+    \\textbf{*** This is system generated copy, no signature required ***}
+\\end{center}
+
+\\vspace{15pt}
+
+% Signature Section
+\\noindent
+\\begin{minipage}[t]{\\textwidth}
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\rule{6cm}{0.5pt}\\\\
+    {\\fontsize{9}{10}\\selectfont Prepared By: ${escapeLatex(bill.user?.name || '')}}
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\rule{6cm}{0.5pt}\\\\
+    {\\fontsize{9}{10}\\selectfont Approved By}
+\\end{minipage}
+\\end{minipage}
+
+\\vspace{20pt}
+
+% Contact information at bottom
+\\begin{center}
+    \\footnotesize
+    For any further query, please communicate with us. 24/7 Call Number \\companyphoneone\\ \\& \\companyphonetwo
+\\end{center}
+
+\\end{document}`;
     }
     numberToWords(num) {
         const units = [

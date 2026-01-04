@@ -12,9 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BillService = void 0;
 const common_1 = require("@nestjs/common");
 const database_service_1 = require("../database/database.service");
+const pdf_service_1 = require("../pdf/pdf.service");
 let BillService = class BillService {
-    constructor(prisma) {
+    constructor(prisma, pdfService) {
         this.prisma = prisma;
+        this.pdfService = pdfService;
     }
     async create(createBillDto, createdBy) {
         const { buyerPOId, ...billData } = createBillDto;
@@ -104,6 +106,16 @@ let BillService = class BillService {
             }
         });
         return bill;
+    }
+    async generatePdf(quotationId) {
+        const quotation = await this.prisma.bill.findUnique({
+            where: { id: quotationId },
+        });
+        if (!quotation) {
+            throw new common_1.NotFoundException(`Bill with ID ${quotationId} not found`);
+        }
+        const pdfBuffer = await this.pdfService.generateBillPdf(quotationId);
+        return pdfBuffer;
     }
     async findAll(searchDto) {
         const { page = 1, limit = 10, search, status, sortBy = 'billDate', sortOrder = 'desc' } = searchDto;
@@ -392,6 +404,6 @@ let BillService = class BillService {
 exports.BillService = BillService;
 exports.BillService = BillService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [database_service_1.DatabaseService])
+    __metadata("design:paramtypes", [database_service_1.DatabaseService, pdf_service_1.PdfService])
 ], BillService);
 //# sourceMappingURL=bill.service.js.map

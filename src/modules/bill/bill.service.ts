@@ -2,10 +2,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AddPaymentDto, BillSearchDto, CreateBillDto } from './dto';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class BillService {
-  constructor(private prisma: DatabaseService) {}
+  constructor(private prisma: DatabaseService, private readonly pdfService: PdfService) {}
 
 async create(createBillDto: CreateBillDto, createdBy: string) {
   const { buyerPOId, ...billData } = createBillDto;
@@ -111,6 +112,23 @@ async create(createBillDto: CreateBillDto, createdBy: string) {
 
   return bill;
 }
+
+  async generatePdf(quotationId: string): Promise<Buffer> {
+    // Check if quotation exists
+    const quotation = await this.prisma.bill.findUnique({
+      where: { id: quotationId },
+    });
+
+    if (!quotation) {
+      throw new NotFoundException(`Bill with ID ${quotationId} not found`);
+    }
+
+    // Generate PDF
+    const pdfBuffer = await this.pdfService.generateBillPdf(quotationId);
+    
+    return pdfBuffer;
+  }
+
 
   async findAll(searchDto: BillSearchDto) {
     const {

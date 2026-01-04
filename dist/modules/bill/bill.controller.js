@@ -43,6 +43,23 @@ let BillController = class BillController {
     findOne(id) {
         return this.billService.findOne(id);
     }
+    async getPdf(id, res) {
+        try {
+            const pdfBuffer = await this.billService.generatePdf(id);
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+                'Content-Length': pdfBuffer.length,
+            });
+            res.status(common_1.HttpStatus.OK).send(pdfBuffer);
+        }
+        catch (error) {
+            res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Failed to generate PDF',
+                error: error.message,
+            });
+        }
+    }
     addPayment(id, addPaymentDto) {
         return this.billService.addPayment(id, addPaymentDto);
     }
@@ -97,6 +114,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], BillController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)(':id/pdf'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], BillController.prototype, "getPdf", null);
 __decorate([
     (0, common_1.Post)(':id/payments'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
