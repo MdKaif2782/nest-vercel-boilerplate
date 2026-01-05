@@ -41,7 +41,7 @@ async function bootstrap() {
     const documentFactory = () => swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('api', app, documentFactory);
     app.enableCors({
-        origin: '*',
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
         allowedHeaders: [
             'Content-Type',
@@ -50,11 +50,14 @@ async function bootstrap() {
             'Accept',
             'Origin'
         ],
+        credentials: true,
     });
+    app.setGlobalPrefix('api');
     app.useGlobalPipes(new common_1.ValidationPipe());
     console.log(`Listening on port ${process.env.PORT}`);
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 2000;
     await app.listen(port);
+    console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map
