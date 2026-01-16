@@ -66,7 +66,7 @@ export class ChallanController {
       // Set headers for PDF download
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+        'Content-Disposition': `attachment; filename="challan-${id}.pdf"`,
         'Content-Length': pdfBuffer.length,
       });
 

@@ -46,7 +46,7 @@ let ChallanController = class ChallanController {
             const pdfBuffer = await this.challanService.generatePdf(id);
             res.set({
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+                'Content-Disposition': `attachment; filename="challan-${id}.pdf"`,
                 'Content-Length': pdfBuffer.length,
             });
             res.status(common_1.HttpStatus.OK).send(pdfBuffer);

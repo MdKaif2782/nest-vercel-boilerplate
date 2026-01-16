@@ -144,8 +144,8 @@ ${rowCounter} & ${productCode} & ${productName} & ${description} & ${item.quanti
                 month: 'short',
                 year: 'numeric',
             });
-        const bodyContent = quotation.body?.replace(/\n/g, '\\\\[5pt] ') ||
-            `Greetings from ${escapeLatex(quotation.companyName)}!\\\\[5pt] Hope you are doing well.\\\\[5pt] We would like to share our quotation for the above mentioned products and services for your kind consideration. The details are given below for easy reference and kind perusal:`;
+        const bodyContent = quotation.body?.replace(/\n\n+/g, '\\\\[5pt] ').trim() ||
+            `We are pleased to submit a quotation for the goods mentioned above. We enclosed descriptions, quantity, unit price, and delivery date of said product. \\\\[5pt] We hope you will find the quotation reasonable and issue us a work order. \\\\[5pt] Please contact us for any clarification.`;
         const deliveryDays = quotation.deliveryDays || 7;
         const deliveryTerms = escapeLatex(quotation.deliveryTerms || `Delivery: Within ${deliveryDays} days`);
         return `\\documentclass[10pt]{article}
@@ -223,6 +223,7 @@ ${rowCounter} & ${productCode} & ${productName} & ${description} & ${item.quanti
 \\begin{minipage}[t]{0.35\\textwidth}
 \\vspace{0pt}
 \\includegraphics[width=0.8\\linewidth]{logo.jpg}
+\\textbf{Growing by Innovation}
 \\end{minipage}
 \\hfill
 % -------------------------
@@ -241,7 +242,7 @@ ${rowCounter} & ${productCode} & ${productName} & ${description} & ${item.quanti
 
 % -------- Text + QR row --------
 \\noindent
-\\begin{minipage}[t]{0.72\\linewidth}
+\\begin{minipage}[t]{0.78\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\fontsize{7}{8}\\selectfont
@@ -249,12 +250,12 @@ ${rowCounter} & ${productCode} & ${productName} & ${description} & ${item.quanti
 
 \\companyaddress\\\\[2pt]
 Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
-\\companylandline\\\\[2pt]
-\\companyemailone\\\\[2pt]
+\\companylandline\\\\[4pt]
+\\companyemailone\\\\[4pt]
 \\companyemailtwo
 \\end{minipage}
 \\hfill
-\\begin{minipage}[t]{0.19\\linewidth}
+\\begin{minipage}[t]{0.18\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\includegraphics[width=\\linewidth]{qr.jpg}
@@ -277,6 +278,7 @@ ${escapeLatex(quotation.companyAddress)}
 \\hfill
 \\begin{minipage}[t]{0.45\\textwidth}
 \\raggedleft
+\\vspace{2pt}
 {\\Large\\textbf{\\textcolor{companycolor}{QUOTATION}}}\\\\[8pt]
 \\textbf{Quotation No.:} ${escapeLatex(quotation.quotationNumber)}\\\\
 \\textbf{Date:} \\today
@@ -288,11 +290,12 @@ ${escapeLatex(quotation.companyAddress)}
 
 \\vspace{10pt}
 
+{\\raggedright
 Dear ${escapeLatex(quotation.contactPersonName?.split(' ')[0] || 'Sir/Madam')},
 
 \\vspace{10pt}
-
 ${bodyContent}
+}
 
 \\vspace{15pt}
 
@@ -313,14 +316,16 @@ ${itemsTableRows}
 
 \\vspace{10pt}
 
+{\\raggedright
 \\noindent\\textbf{In Words:} ${moneyInWords}
+}
 
 \\vspace{15pt}
 
 \\noindent\\textbf{Terms \\& Conditions:}
-\\begin{itemize}
-\\item ${escapeLatex(quotation.generalTerms || 'Price is Without VAT & TAX')}
-\\item ${escapeLatex(quotation.paymentTerms || 'Payment: 50% advance, 50% on delivery')}
+\\begin{itemize}\\raggedright
+\\item ${escapeLatex(quotation.generalTerms || '1. Goods will be supplied as per Quotation. 2. Prices are exclusive of VAT/Tax unless mentioned. 3. Delivery within 15 working days from the date of Purchase Order. 4. Payment Terms: 50% advance with PO, 50% before delivery. 5. Warranty: 1 year from the date of delivery. 6. Any changes in specification may affect price and delivery time. 7. Quotation valid for 30 days from the date of issue.')}
+\\item ${escapeLatex(quotation.paymentTerms || '1. 50% advance payment with Purchase Order. 2. 50% payment before delivery/dispatch of goods. 3. Payment through Bank Transfer/Cheque in favor of our company. 4. All payments must be cleared before goods are dispatched.')}
 \\item ${deliveryTerms}
 \\item This quotation is valid until ${validUntil}
 \\item Prices are subject to change without prior notice
@@ -329,26 +334,38 @@ ${itemsTableRows}
 
 \\vspace{15pt}
 
-We sincerely look forward to the opportunity of being entrusted partner of your esteemed organization to contribute in your success.
+\\newpage
 
+{\\raggedright
+We sincerely look forward to the opportunity of being entrusted partner of your esteemed organization to contribute in your success.
 Please do not hesitate to communicate for any further information or clarification. We value the possibility of building a long-term professional relationship with your esteemed organization.
 
+\\vspace{0.5cm}
 Thanks in advance.
+}
 
+\\vspace{30pt}
 \\vfill
 
 \\begin{center}
-\\begin{minipage}{0.45\\textwidth}
+\\begin{minipage}{0.4\\textwidth}
     \\centering
-    \\vspace{1cm}
-    \\rule{6cm}{0.5pt}\\\\
+    Tawhid\\\\[0.3cm]
+    \\rule{6cm}{0.5pt}\\\\[0.3cm]
     Prepared by
 \\end{minipage}
 \\hfill
-\\begin{minipage}{0.45\\textwidth}
+\\begin{minipage}{0.15\\textwidth}
     \\centering
-    \\vspace{1cm}
-    \\rule{6cm}{0.5pt}\\\\
+    \\raisebox{-0.5\\height}{%
+        \\includegraphics[width=\\linewidth]{mark.jpg}
+    }
+\\end{minipage}
+\\hfill
+\\begin{minipage}{0.4\\textwidth}
+    \\centering
+    M.A Latif Reza\\\\[0.3cm]
+    \\rule{6cm}{0.5pt}\\\\[0.3cm]
     Approved by
 \\end{minipage}
 \\end{center}
@@ -365,7 +382,7 @@ Thanks in advance.
                 path.join(__dirname, '..', '..', 'assets'),
                 path.join(__dirname, '..', '..', 'public'),
             ];
-            const assets = ['logo.jpg', 'qr.jpg', 'logo.png', 'qr.png'];
+            const assets = ['logo.jpg', 'qr.jpg', 'mark.jpg', 'logo.png', 'qr.png'];
             for (const asset of assets) {
                 let assetCopied = false;
                 for (const location of assetLocations) {
@@ -378,7 +395,7 @@ Thanks in advance.
                         break;
                     }
                 }
-                if (!assetCopied && (asset.includes('logo') || asset.includes('qr'))) {
+                if (!assetCopied && (asset.includes('logo') || asset.includes('qr') || asset.includes('mark'))) {
                     await this.createPlaceholderImage(path.join(tmpDirPath, asset));
                 }
             }
@@ -648,7 +665,8 @@ ${rowCounter} & ${itemCode} & ${productDescription} & ${item.quantity} & Pcs & $
 % -------------------------
 \\begin{minipage}[t]{0.35\\textwidth}
 \\vspace{0pt}
-\\includegraphics[width=0.8\\linewidth]{logo.jpg}
+\\includegraphics[width=0.8\\linewidth]{logo.jpg}\\\\
+\\textbf{Growing by Innovation}
 \\end{minipage}
 \\hfill
 % -------------------------
@@ -667,7 +685,7 @@ ${rowCounter} & ${itemCode} & ${productDescription} & ${item.quantity} & Pcs & $
 
 % -------- Text + QR row --------
 \\noindent
-\\begin{minipage}[t]{0.72\\linewidth}
+\\begin{minipage}[t]{0.78\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\fontsize{7}{8}\\selectfont
@@ -675,12 +693,12 @@ ${rowCounter} & ${itemCode} & ${productDescription} & ${item.quantity} & Pcs & $
 
 \\companyaddress\\\\[2pt]
 Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
-\\companylandline\\\\[2pt]
-\\companyemailone\\\\[2pt]
+\\companylandline\\\\[4pt]
+\\companyemailone\\\\[4pt]
 \\companyemailtwo
 \\end{minipage}
 \\hfill
-\\begin{minipage}[t]{0.19\\linewidth}
+\\begin{minipage}[t]{0.18\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\includegraphics[width=\\linewidth]{qr.jpg}
@@ -709,7 +727,7 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
     \\textbf{Invoice No.:} ${escapeLatex(bill.billNumber)} & \\textbf{VAT Reg. No.:} ${escapeLatex(bill.vatRegNo || 'N/A')} \\\\
     \\textbf{Customer Name:} \\textbf{${escapeLatex(companyName)}} & \\textbf{Code:} ${escapeLatex(bill.code || 'N/A')} \\\\
     \\textbf{Address:} ${escapeLatex(companyAddress)} & \\textbf{Vendor ID:} ${escapeLatex(bill.vendorNo || 'N/A')} \\\\
-    \\hspace{2.5cm} ${escapeLatex(contactPerson)} & \\textbf{Purchase Order No.:} ${escapeLatex(bill.buyerPO?.poNumber || 'N/A')} \\\\
+    \\textbf{Contact Name:} ${escapeLatex(contactPerson)} & \\textbf{Purchase Order No.:} ${escapeLatex(bill.buyerPO?.poNumber || 'N/A')} \\\\
     \\textbf{Phone:} ${escapeLatex(companyContact)} & \\textbf{Purchase Order Date:} ${bill.buyerPO?.poDate ? formatDate(bill.buyerPO.poDate) : 'N/A'} \\\\
     \\textbf{Date:} ${formatDate(bill.billDate)} & \\textbf{Chalan No.:} [To be filled] \\\\
     & \\textbf{Print Date:} \\today \\\\
@@ -752,6 +770,7 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
     & \\textbf{Bill Due:} ${formatCurrency(billDue)} \\\\
     & \\textbf{Previous Due:} ${formatCurrency(previousDue)} \\\\
     & \\textbf{Total Due:} ${formatCurrency(billDue + previousDue)} \\\\
+    & \\textbf{VAT/Tax \\%:} \\underline{\\hspace{3cm}} \\\\
 \\end{tabularx}
 
 \\vspace{5pt}
@@ -762,29 +781,32 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
 \\end{tabularx}
 
 \\vspace{10pt}
-
-% Note about system generated copy
-\\begin{center}
-    \\textbf{*** This is system generated copy, no signature required ***}
-\\end{center}
-
-\\vspace{15pt}
+\\vfill
 
 % Signature Section
 \\noindent
 \\begin{minipage}[t]{\\textwidth}
 \\begin{minipage}[t]{0.45\\textwidth}
     \\centering
-    \\rule{6cm}{0.5pt}\\\\
-    {\\fontsize{9}{10}\\selectfont Prepared By: ${escapeLatex(bill.user?.name || '')}}
+    Tawhid\\\\[0.3cm]
+    \\rule{6cm}{0.5pt}\\\\[0.3cm]
+    Prepared by
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.45\\textwidth}
     \\centering
-    \\rule{6cm}{0.5pt}\\\\
-    {\\fontsize{9}{10}\\selectfont Approved By}
+    M.A Latif Reza\\\\[0.3cm]
+    \\rule{6cm}{0.5pt}\\\\[0.3cm]
+    Approved by
 \\end{minipage}
 \\end{minipage}
+
+\\vspace{10pt}
+
+% Note about system generated copy
+\\begin{center}
+    \\textbf{*** This is system generated copy, no signature required ***}
+\\end{center}
 
 \\vspace{20pt}
 
@@ -1003,7 +1025,8 @@ ${rowCounter} & ${itemCode} & ${itemDescription} & ${item.quantity} & Pcs \\\\
 % -------------------------
 \\begin{minipage}[t]{0.35\\textwidth}
 \\vspace{0pt}
-\\includegraphics[width=0.8\\linewidth]{logo.jpg}
+\\includegraphics[width=0.8\\linewidth]{logo.jpg}\\\\
+\\textbf{Growing by Innovation}
 \\end{minipage}
 \\hfill
 % -------------------------
@@ -1022,7 +1045,7 @@ ${rowCounter} & ${itemCode} & ${itemDescription} & ${item.quantity} & Pcs \\\\
 
 % -------- Text + QR row --------
 \\noindent
-\\begin{minipage}[t]{0.72\\linewidth}
+\\begin{minipage}[t]{0.78\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\fontsize{7}{8}\\selectfont
@@ -1030,12 +1053,12 @@ ${rowCounter} & ${itemCode} & ${itemDescription} & ${item.quantity} & Pcs \\\\
 
 \\companyaddress\\\\[2pt]
 Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
-\\companylandline\\\\[2pt]
-\\companyemailone\\\\[2pt]
+\\companylandline\\\\[4pt]
+\\companyemailone\\\\[4pt]
 \\companyemailtwo
 \\end{minipage}
 \\hfill
-\\begin{minipage}[t]{0.19\\linewidth}
+\\begin{minipage}[t]{0.18\\linewidth}
 \\vspace{0pt}
 \\raggedleft
 \\includegraphics[width=\\linewidth]{qr.jpg}
@@ -1068,10 +1091,9 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
     \\textbf{Challan No.:} ${escapeLatex(challan.challanNumber)} & \\textbf{VAT Reg. No.:} ${escapeLatex(vatRegNo)} \\\\
     \\textbf{Customer Name:} \\textbf{${escapeLatex(companyName)}} & \\textbf{Code:} ${escapeLatex(code)} \\\\
     \\textbf{Address:} ${escapeLatex(addressLine1)} & \\textbf{Vendor ID:} ${escapeLatex(vendorNo)} \\\\
-    \\hspace{2.5cm} ${escapeLatex(addressLine2)} & \\textbf{Purchase Order No.:} ${escapeLatex(challan.buyerPurchaseOrder?.poNumber || 'N/A')} \\\\
+    \\textbf{Contact Name:} ${escapeLatex(addressLine2)} & \\textbf{Purchase Order No.:} ${escapeLatex(challan.buyerPurchaseOrder?.poNumber || 'N/A')} \\\\
     \\textbf{Phone:} ${escapeLatex(companyContact)} & \\textbf{Purchase Order Date:} ${challan.buyerPurchaseOrder?.poDate ? formatDate(challan.buyerPurchaseOrder.poDate) : 'N/A'} \\\\
-    \\textbf{Date:} ${challan.dispatchDate ? formatDate(challan.dispatchDate) : formatDate(challan.createdAt)} & \\textbf{Invoice No.:} ${escapeLatex(invoiceNo)} \\\\
-    & \\textbf{Print Date:} \\today \\\\
+    \\textbf{Date:} ${formatDate(challan.createdAt)} & \\textbf{Print Date:} \\today \\\\
 \\end{tabularx}
 
 \\vspace{15pt}
@@ -1104,44 +1126,51 @@ Phone: \\companyphoneone, \\companyphonetwo\\\\[2pt]
 
 \\vspace{15pt}
 
-% Delivery Information
+% Summary Information
 \\noindent
 \\begin{minipage}[t]{0.48\\textwidth}
-    \\textbf{Dispatch Date:} ${challan.dispatchDate ? formatDate(challan.dispatchDate) : 'To be dispatched'} \\\\
-    \\textbf{Delivery Date:} ${challan.deliveryDate ? formatDate(challan.deliveryDate) : 'To be delivered'}
+    \\textbf{Total Items:} ${challan.items.length}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.48\\textwidth}
     \\raggedleft
-    \\textbf{Total Items:} ${challan.items.length} \\\\
     \\textbf{Total Quantity:} ${totalQuantity} Pcs
 \\end{minipage}
 
 \\vspace{20pt}
+\\vfill
+
+% Signature Section with three columns
+\\noindent
+\\begin{minipage}[t]{\\textwidth}
+\\begin{minipage}[t]{0.3\\textwidth}
+    \\centering
+    Tawhid\\\\[0.3cm]
+    \\rule{4cm}{0.5pt}\\\\[0.3cm]
+    Prepared by
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.3\\textwidth}
+    \\centering
+    \\vspace{1cm}
+    \\rule{4cm}{0.5pt}\\\\[0.3cm]
+    Received by
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.3\\textwidth}
+    \\centering
+    M.A Latif Reza\\\\[0.3cm]
+    \\rule{4cm}{0.5pt}\\\\[0.3cm]
+    Approved by
+\\end{minipage}
+\\end{minipage}
+
+\\vspace{10pt}
 
 % Note about system generated copy
 \\begin{center}
     \\textbf{*** This is system generated copy, no signature required ***}
 \\end{center}
-
-\\vspace{15pt}
-\\vfill
-
-% Signature Section
-\\noindent
-\\begin{minipage}[t]{\\textwidth}
-\\begin{minipage}[t]{0.45\\textwidth}
-    \\centering
-    \\rule{6cm}{0.5pt}\\\\
-    {\\fontsize{9}{10}\\selectfont Prepared By}
-\\end{minipage}
-\\hfill
-\\begin{minipage}[t]{0.45\\textwidth}
-    \\centering
-    \\rule{6cm}{0.5pt}\\\\
-    {\\fontsize{9}{10}\\selectfont Approved By}
-\\end{minipage}
-\\end{minipage}
 
 \\vspace{20pt}
 

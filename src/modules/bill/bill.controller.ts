@@ -73,7 +73,7 @@ export class BillController {
       // Set headers for PDF download
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="quotation-${id}.pdf"`,
+        'Content-Disposition': `attachment; filename="bill-${id}.pdf"`,
         'Content-Length': pdfBuffer.length,
       });
 
