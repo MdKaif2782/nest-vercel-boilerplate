@@ -24,6 +24,7 @@ const report_module_1 = require("../report/report.module");
 const statistics_module_1 = require("../statistics/statistics.module");
 const challan_module_1 = require("../challan/challan.module");
 const pdf_module_1 = require("../pdf/pdf.module");
+const retail_sale_module_1 = require("../retail-sale/retail-sale.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,7 +47,8 @@ exports.AppModule = AppModule = __decorate([
             report_module_1.ReportModule,
             statistics_module_1.StatisticsModule,
             challan_module_1.ChallanModule,
-            pdf_module_1.PdfModule
+            pdf_module_1.PdfModule,
+            retail_sale_module_1.RetailSaleModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

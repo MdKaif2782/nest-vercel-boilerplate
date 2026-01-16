@@ -336,12 +336,20 @@ enum PaymentMethod {
 
 // Module 7: Retail Selling
 model RetailSale {
-  id          String   @id @default(cuid())
-  saleNumber  String   @unique
-  saleDate    DateTime @default(now())
-  totalAmount Float
+  id            String   @id @default(cuid())
+  saleNumber    String   @unique
+  saleDate      DateTime @default(now())
+  customerName  String?
+  customerPhone String?
+  subtotal      Float
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  totalAmount   Float
   paymentMethod PaymentMethod
-  reference   String?
+  reference     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   // Relations
   items RetailSaleItem[]
