@@ -10,6 +10,7 @@ exports.RetailSaleModule = void 0;
 const common_1 = require("@nestjs/common");
 const retail_sale_controller_1 = require("./retail-sale.controller");
 const retail_sale_service_1 = require("./retail-sale.service");
+const retail_sale_pdf_service_1 = require("./retail-sale-pdf.service");
 const database_module_1 = require("../database/database.module");
 let RetailSaleModule = class RetailSaleModule {
 };
@@ -18,8 +19,8 @@ exports.RetailSaleModule = RetailSaleModule = __decorate([
     (0, common_1.Module)({
         imports: [database_module_1.DatabaseModule],
         controllers: [retail_sale_controller_1.RetailSaleController],
-        providers: [retail_sale_service_1.RetailSaleService],
-        exports: [retail_sale_service_1.RetailSaleService],
+        providers: [retail_sale_service_1.RetailSaleService, retail_sale_pdf_service_1.RetailSalePdfService],
+        exports: [retail_sale_service_1.RetailSaleService, retail_sale_pdf_service_1.RetailSalePdfService],
     })
 ], RetailSaleModule);
 //# sourceMappingURL=retail-sale.module.js.map

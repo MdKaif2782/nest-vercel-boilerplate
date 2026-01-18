@@ -1,0 +1,651 @@
+import { Injectable } from '@nestjs/common';
+import PDFDocument from 'pdfkit';
+import * as Table from 'pdfkit-table';
+import { addLetterhead, formatCurrency, formatDate } from '../pdf/letterhead.util';
+import { ReportService } from './report.service';
+
+@Injectable()
+export class ReportPdfService {
+  constructor(private readonly reportService: ReportService) {}
+
+  private getDefaultYearMonth(): { year: number; month: number } {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1, // JavaScript months are 0-indexed
+    };
+  }
+
+  private getDateRange(year?: number, month?: number): { startDate: Date; endDate: Date } {
+    const { year: defaultYear, month: defaultMonth } = this.getDefaultYearMonth();
+    const targetYear = year || defaultYear;
+    const targetMonth = month || defaultMonth;
+
+    const startDate = new Date(targetYear, targetMonth - 1, 1);
+    const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }
+
+  async generateFinancialReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { startDate, endDate } = this.getDateRange(year, month);
+        
+        // Fetch financial data
+        const salesSummary = await this.reportService.getSalesSummary({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const expenses = await this.reportService.getExpenseByCategory({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const receivables = await this.reportService.getCompanyReceivables();
+        const businessHealth = await this.reportService.getBusinessHealth();
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        // Add letterhead
+        addLetterhead({ doc, title: 'Financial Report' });
+
+        // Period
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Sales Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Sales Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Sales: ${formatCurrency(salesSummary.totalSales)}`);
+        doc.text(`Total Bills: ${salesSummary.totalBills}`);
+        doc.text(`Average Bill Amount: ${formatCurrency(salesSummary.averageBillAmount)}`);
+        doc.text(`Total Payments Received: ${formatCurrency(salesSummary.totalPaymentsReceived)}`);
+        doc.text(`Outstanding Amount: ${formatCurrency(salesSummary.outstandingAmount)}`);
+        doc.moveDown(1);
+
+        // Expense Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Expense Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        const totalExpenses = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Expenses: ${formatCurrency(totalExpenses)}`);
+        doc.moveDown(0.5);
+
+        // Expense by category table
+        if (expenses.length > 0) {
+          const expenseTable = {
+            title: 'Expenses by Category',
+            headers: ['Category', 'Count', 'Amount', '% of Total'],
+            rows: expenses.map(exp => [
+              exp.category,
+              exp.count.toString(),
+              formatCurrency(exp.totalAmount),
+              `${exp.percentageOfTotal.toFixed(2)}%`,
+            ]),
+          };
+
+          (doc as any).table(expenseTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        }
+
+        doc.moveDown(1);
+
+        // Financial Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Financial Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        const netIncome = salesSummary.totalPaymentsReceived - totalExpenses;
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Net Income: ${formatCurrency(netIncome)}`);
+        doc.text(`Cash Flow: ${formatCurrency(businessHealth.cashFlow)}`);
+        doc.text(`Profit Margin: ${businessHealth.profitMargin.toFixed(2)}%`);
+        doc.moveDown(1);
+
+        // Accounts Receivable
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Accounts Receivable', { underline: true });
+        doc.moveDown(0.5);
+
+        const totalReceivables = receivables.reduce((sum, r) => sum + r.totalDue, 0);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Outstanding: ${formatCurrency(totalReceivables)}`);
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateInventoryReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const inventorySummary = await this.reportService.getInventorySummary();
+        const companyStock = await this.reportService.getCompanyWiseStock();
+        const lowStock = await this.reportService.getLowStockReport();
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Inventory Report' });
+
+        // Overall Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Inventory Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Items: ${inventorySummary.totalItems}`);
+        doc.text(`Total Inventory Value: ${formatCurrency(inventorySummary.totalInventoryValue)}`);
+        doc.text(`Expected Sale Value: ${formatCurrency(inventorySummary.totalExpectedSaleValue)}`);
+        doc.text(`Average Stock Value: ${formatCurrency(inventorySummary.averageStockValue)}`);
+        doc.text(`Low Stock Items: ${inventorySummary.lowStockItemsCount}`);
+        doc.moveDown(1);
+
+        // Company-wise Stock
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Stock by Company', { underline: true });
+        doc.moveDown(0.5);
+
+        if (companyStock.length > 0) {
+          const stockTable = {
+            title: 'Company-wise Stock Distribution',
+            headers: ['Company', 'Items', 'Value', '% of Total'],
+            rows: companyStock.map(company => [
+              company.companyName,
+              company.itemCount.toString(),
+              formatCurrency(company.stockValue),
+              `${company.percentageOfTotal.toFixed(2)}%`,
+            ]),
+          };
+
+          (doc as any).table(stockTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        }
+
+        doc.moveDown(1);
+
+        // Low Stock Items
+        if (lowStock.length > 0) {
+          doc.fontSize(12)
+             .font('Helvetica-Bold')
+             .text('Low Stock Alert', { underline: true });
+          doc.moveDown(0.5);
+
+          const lowStockTable = {
+            title: 'Items Below Minimum Stock Level',
+            headers: ['Product', 'Current', 'Min', 'Status'],
+            rows: lowStock.slice(0, 10).map(item => [
+              item.productName,
+              item.currentStock.toString(),
+              item.minStockLevel.toString(),
+              item.status,
+            ]),
+          };
+
+          (doc as any).table(lowStockTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateInvestorReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const investors = await this.reportService.getInvestorSummary();
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Investor Report' });
+
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Investor Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        if (investors.length > 0) {
+          const totalInvestment = investors.reduce((sum, inv) => sum + inv.totalInvested, 0);
+          const totalProfits = investors.reduce((sum, inv) => sum + inv.totalProfits, 0);
+          const totalPaid = investors.reduce((sum, inv) => sum + inv.totalPaid, 0);
+
+          doc.fontSize(10).font('Helvetica');
+          doc.text(`Total Investment: ${formatCurrency(totalInvestment)}`);
+          doc.text(`Total Profits: ${formatCurrency(totalProfits)}`);
+          doc.text(`Total Paid Out: ${formatCurrency(totalPaid)}`);
+          doc.text(`Number of Investors: ${investors.length}`);
+          doc.moveDown(1);
+
+          const investorTable = {
+            title: 'Investor Details',
+            headers: ['Name', 'Invested', 'Profits', 'Paid', 'Balance'],
+            rows: investors.map(inv => [
+              inv.investorName,
+              formatCurrency(inv.totalInvested),
+              formatCurrency(inv.totalProfits),
+              formatCurrency(inv.totalPaid),
+              formatCurrency(inv.balance),
+            ]),
+          };
+
+          (doc as any).table(investorTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        } else {
+          doc.fontSize(10).font('Helvetica');
+          doc.text('No investor data available.');
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateSalesReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { startDate, endDate } = this.getDateRange(year, month);
+        
+        const salesSummary = await this.reportService.getSalesSummary({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const billingSummary = await this.reportService.getBillingSummary();
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Sales Report' });
+
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Sales Overview
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Sales Overview', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Sales Amount: ${formatCurrency(salesSummary.totalSales)}`);
+        doc.text(`Total Number of Bills: ${salesSummary.totalBills}`);
+        doc.text(`Average Bill Amount: ${formatCurrency(salesSummary.averageBillAmount)}`);
+        doc.text(`Highest Bill Amount: ${formatCurrency(salesSummary.highestBillAmount)}`);
+        doc.text(`Lowest Bill Amount: ${formatCurrency(salesSummary.lowestBillAmount)}`);
+        doc.moveDown(1);
+
+        // Payment Status
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Payment Status', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Payments Received: ${formatCurrency(salesSummary.totalPaymentsReceived)}`);
+        doc.text(`Outstanding Amount: ${formatCurrency(salesSummary.outstandingAmount)}`);
+        doc.text(`Collection Rate: ${((salesSummary.totalPaymentsReceived / salesSummary.totalSales) * 100).toFixed(2)}%`);
+        doc.moveDown(1);
+
+        // Billing Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Overall Billing Statistics', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Lifetime Bills: ${billingSummary.totalBills}`);
+        doc.text(`Fully Paid Bills: ${billingSummary.fullyPaidBills}`);
+        doc.text(`Partially Paid Bills: ${billingSummary.partiallyPaidBills}`);
+        doc.text(`Unpaid Bills: ${billingSummary.unpaidBills}`);
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateEmployeeReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { startDate, endDate } = this.getDateRange(year, month);
+        
+        const salarySummary = await this.reportService.getSalarySummary({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const monthlySalaries = await this.reportService.getMonthlySalaries({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Employee Report' });
+
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Salary Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Salary Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Employees: ${salarySummary.totalEmployees}`);
+        doc.text(`Total Salaries Paid: ${formatCurrency(salarySummary.totalSalariesPaid)}`);
+        doc.text(`Average Salary: ${formatCurrency(salarySummary.averageSalary)}`);
+        doc.text(`Total Allowances: ${formatCurrency(salarySummary.totalAllowances)}`);
+        doc.text(`Total Deductions: ${formatCurrency(salarySummary.totalDeductions)}`);
+        doc.moveDown(1);
+
+        // Monthly Salaries
+        if (monthlySalaries.length > 0) {
+          doc.fontSize(12)
+             .font('Helvetica-Bold')
+             .text('Employee Salary Details', { underline: true });
+          doc.moveDown(0.5);
+
+          const salaryTable = {
+            title: 'Monthly Salary Breakdown',
+            headers: ['Employee', 'Basic', 'Allowances', 'Deductions', 'Net'],
+            rows: monthlySalaries.map(sal => [
+              sal.employeeName,
+              formatCurrency(sal.basicSalary),
+              formatCurrency(sal.totalAllowances),
+              formatCurrency(sal.totalDeductions),
+              formatCurrency(sal.netSalary),
+            ]),
+          };
+
+          (doc as any).table(salaryTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateExpenseReport(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { startDate, endDate } = this.getDateRange(year, month);
+        
+        const expenses = await this.reportService.getExpenseByCategory({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        });
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Expense Report' });
+
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Expense Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Expense Summary', { underline: true });
+        doc.moveDown(0.5);
+
+        const totalExpenses = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+        const totalCount = expenses.reduce((sum, exp) => sum + exp.count, 0);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Expenses: ${formatCurrency(totalExpenses)}`);
+        doc.text(`Total Transactions: ${totalCount}`);
+        doc.text(`Average Expense: ${formatCurrency(totalExpenses / totalCount || 0)}`);
+        doc.moveDown(1);
+
+        // Expense by Category
+        if (expenses.length > 0) {
+          doc.fontSize(12)
+             .font('Helvetica-Bold')
+             .text('Expenses by Category', { underline: true });
+          doc.moveDown(0.5);
+
+          const expenseTable = {
+            title: 'Category-wise Breakdown',
+            headers: ['Category', 'Count', 'Amount', '% of Total', 'Average'],
+            rows: expenses.map(exp => [
+              exp.category,
+              exp.count.toString(),
+              formatCurrency(exp.totalAmount),
+              `${exp.percentageOfTotal.toFixed(2)}%`,
+              formatCurrency(exp.averageAmount),
+            ]),
+          };
+
+          (doc as any).table(expenseTable, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: () => doc.font('Helvetica').fontSize(9),
+          });
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async generateAllReportsSummary(year?: number, month?: number): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { startDate, endDate } = this.getDateRange(year, month);
+        
+        // Fetch all necessary data
+        const [
+          salesSummary,
+          inventorySummary,
+          investors,
+          expenses,
+          salarySummary,
+          businessHealth,
+        ] = await Promise.all([
+          this.reportService.getSalesSummary({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          }),
+          this.reportService.getInventorySummary(),
+          this.reportService.getInvestorSummary(),
+          this.reportService.getExpenseByCategory({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          }),
+          this.reportService.getSalarySummary({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          }),
+          this.reportService.getBusinessHealth(),
+        ]);
+
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        addLetterhead({ doc, title: 'Executive Summary - All Reports' });
+
+        doc.fontSize(11)
+           .font('Helvetica-Bold')
+           .text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Business Health Overview
+        doc.fontSize(14)
+           .font('Helvetica-Bold')
+           .text('Business Health Overview', { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Cash Flow: ${formatCurrency(businessHealth.cashFlow)}`);
+        doc.text(`Profit Margin: ${businessHealth.profitMargin.toFixed(2)}%`);
+        doc.text(`Inventory Turnover: ${businessHealth.inventoryTurnover.toFixed(2)}`);
+        doc.text(`Debt to Equity Ratio: ${businessHealth.debtToEquity.toFixed(2)}`);
+        doc.moveDown(1);
+
+        // Sales Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('1. Sales Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Total Sales: ${formatCurrency(salesSummary.totalSales)}`);
+        doc.text(`• Total Bills: ${salesSummary.totalBills}`);
+        doc.text(`• Payments Received: ${formatCurrency(salesSummary.totalPaymentsReceived)}`);
+        doc.text(`• Outstanding: ${formatCurrency(salesSummary.outstandingAmount)}`);
+        doc.moveDown(1);
+
+        // Inventory Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('2. Inventory Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Total Items: ${inventorySummary.totalItems}`);
+        doc.text(`• Inventory Value: ${formatCurrency(inventorySummary.totalInventoryValue)}`);
+        doc.text(`• Expected Sale Value: ${formatCurrency(inventorySummary.totalExpectedSaleValue)}`);
+        doc.text(`• Low Stock Items: ${inventorySummary.lowStockItemsCount}`);
+        doc.moveDown(1);
+
+        // Investor Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('3. Investor Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        const totalInvestment = investors.reduce((sum, inv) => sum + inv.totalInvested, 0);
+        const totalProfits = investors.reduce((sum, inv) => sum + inv.totalProfits, 0);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Total Investment: ${formatCurrency(totalInvestment)}`);
+        doc.text(`• Total Profits: ${formatCurrency(totalProfits)}`);
+        doc.text(`• Number of Investors: ${investors.length}`);
+        doc.moveDown(1);
+
+        // Expense Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('4. Expense Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        const totalExpenses = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Total Expenses: ${formatCurrency(totalExpenses)}`);
+        doc.text(`• Number of Categories: ${expenses.length}`);
+        if (expenses.length > 0) {
+          const topExpense = expenses.sort((a, b) => b.totalAmount - a.totalAmount)[0];
+          doc.text(`• Top Category: ${topExpense.category} (${formatCurrency(topExpense.totalAmount)})`);
+        }
+        doc.moveDown(1);
+
+        // Employee Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('5. Employee Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Total Employees: ${salarySummary.totalEmployees}`);
+        doc.text(`• Total Salaries: ${formatCurrency(salarySummary.totalSalariesPaid)}`);
+        doc.text(`• Average Salary: ${formatCurrency(salarySummary.averageSalary)}`);
+        doc.moveDown(1);
+
+        // Financial Summary
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('6. Financial Summary', { underline: true });
+        doc.moveDown(0.3);
+
+        const netIncome = salesSummary.totalPaymentsReceived - totalExpenses - salarySummary.totalSalariesPaid;
+
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`• Revenue: ${formatCurrency(salesSummary.totalPaymentsReceived)}`);
+        doc.text(`• Operating Expenses: ${formatCurrency(totalExpenses + salarySummary.totalSalariesPaid)}`);
+        doc.text(`• Net Income: ${formatCurrency(netIncome)}`);
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+}

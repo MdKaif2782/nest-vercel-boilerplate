@@ -15,10 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RetailSaleController = void 0;
 const common_1 = require("@nestjs/common");
 const retail_sale_service_1 = require("./retail-sale.service");
+const retail_sale_pdf_service_1 = require("./retail-sale-pdf.service");
 const dto_1 = require("./dto");
 let RetailSaleController = class RetailSaleController {
-    constructor(retailSaleService) {
+    constructor(retailSaleService, retailSalePdfService) {
         this.retailSaleService = retailSaleService;
+        this.retailSalePdfService = retailSalePdfService;
     }
     create(createRetailSaleDto) {
         return this.retailSaleService.createRetailSale(createRetailSaleDto);
@@ -41,6 +43,22 @@ let RetailSaleController = class RetailSaleController {
     }
     remove(id) {
         return this.retailSaleService.deleteRetailSale(id);
+    }
+    async generateInvoice(retailSaleId, res) {
+        const buffer = await this.retailSalePdfService.generateSalesInvoice(retailSaleId);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="invoice-${retailSaleId}.pdf"`
+        });
+        res.send(buffer);
+    }
+    async generateReceipt(retailSaleId, res) {
+        const buffer = await this.retailSalePdfService.generateReceipt(retailSaleId);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="receipt-${retailSaleId}.pdf"`
+        });
+        res.send(buffer);
     }
 };
 exports.RetailSaleController = RetailSaleController;
@@ -85,8 +103,25 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], RetailSaleController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('invoice/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RetailSaleController.prototype, "generateInvoice", null);
+__decorate([
+    (0, common_1.Get)('receipt/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RetailSaleController.prototype, "generateReceipt", null);
 exports.RetailSaleController = RetailSaleController = __decorate([
     (0, common_1.Controller)('retail-sales'),
-    __metadata("design:paramtypes", [retail_sale_service_1.RetailSaleService])
+    __metadata("design:paramtypes", [retail_sale_service_1.RetailSaleService,
+        retail_sale_pdf_service_1.RetailSalePdfService])
 ], RetailSaleController);
 //# sourceMappingURL=retail-sale.controller.js.map

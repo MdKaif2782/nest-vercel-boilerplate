@@ -1,9 +1,12 @@
+import { Response } from 'express';
 import { ReportService } from './report.service';
+import { ReportPdfService } from './report-pdf.service';
 import { DateRangeDto, PeriodQueryDto } from './dto/report-query.dto';
 import { InventorySummaryDto, CompanyStockDto, LowStockItemDto, CompanyReceivableDto, ReceivableAgingDto, BillingSummaryDto, InvestorSummaryDto, InvestmentBreakdownDto, ExpenseCategorySummaryDto, PeriodicExpenseDto, SalesSummaryDto, PeriodicSalesDto, SalarySummaryDto, MonthlySalaryDto, BusinessHealthDto, CorporateSummaryDto } from './dto/report-response.dto';
 export declare class ReportController {
     private readonly reportService;
-    constructor(reportService: ReportService);
+    private readonly reportPdfService;
+    constructor(reportService: ReportService, reportPdfService: ReportPdfService);
     getInventorySummary(): Promise<InventorySummaryDto>;
     getCompanyWiseStock(): Promise<CompanyStockDto[]>;
     getLowStockReport(): Promise<LowStockItemDto[]>;
@@ -46,4 +49,5 @@ export declare class ReportController {
             activeEmployees: number;
         };
     }>;
+    generateReport(type: string, year?: string, month?: string, res?: Response): Promise<Response<any, Record<string, any>>>;
 }

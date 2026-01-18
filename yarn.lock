@@ -1358,6 +1358,13 @@
   dependencies:
     undici-types "~6.19.2"
 
+"@types/pdfkit@^0.17.4":
+  version "0.17.4"
+  resolved "https://registry.yarnpkg.com/@types/pdfkit/-/pdfkit-0.17.4.tgz#28d62e41bec19adb356d61ed41015b3b2f59031d"
+  integrity sha512-odAmVuuguRxKh1X4pbMrJMp8ecwNqHRw6lweupvzK+wuyNmi6wzlUlGVZ9EqMvp3Bs2+L9Ty0sRlrvKL+gsQZg==
+  dependencies:
+    "@types/node" "*"
+
 "@types/qs@*":
   version "6.9.16"
   resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.16.tgz#52bba125a07c0482d26747d5d4947a64daf8f794"
@@ -4940,7 +4947,14 @@ pause@0.0.1:
   resolved "https://registry.yarnpkg.com/pause/-/pause-0.0.1.tgz#1d408b3fdb76923b9543d96fb4c9dfd535d9cb5d"
   integrity sha512-KG8UEiEVkR3wGEb4m5yZkVCzigAD+cVEJck2CzYZO37ZGJfctvVptVO192MwrtPhzONn6go8ylnOdMhKqi4nfg==
 
-pdfkit@^0.17.2:
+pdfkit-table@^0.1.99:
+  version "0.1.99"
+  resolved "https://registry.yarnpkg.com/pdfkit-table/-/pdfkit-table-0.1.99.tgz#66854b91e7a811a4e89b800f26b134426d21a7a3"
+  integrity sha512-BaunFJ7cvKqIPONzX9FXUpeC/3iJeLo0v2nVNjCccAxdMXKvDMBjxyF4wZhKOYlmP+nYZcikf9ByVJeCzjNK6g==
+  dependencies:
+    pdfkit latest
+
+pdfkit@^0.17.2, pdfkit@latest:
   version "0.17.2"
   resolved "https://registry.yarnpkg.com/pdfkit/-/pdfkit-0.17.2.tgz#f77d7129ca49bc5015246b890d1aca6cb6b71f00"
   integrity sha512-UnwF5fXy08f0dnp4jchFYAROKMNTaPqb/xgR8GtCzIcqoTnbOqtp3bwKvO4688oHI6vzEEs8Q6vqqEnC5IUELw==

@@ -1,8 +1,11 @@
+import { Response } from 'express';
 import { RetailSaleService } from './retail-sale.service';
+import { RetailSalePdfService } from './retail-sale-pdf.service';
 import { CreateRetailSaleDto } from './dto';
 export declare class RetailSaleController {
     private readonly retailSaleService;
-    constructor(retailSaleService: RetailSaleService);
+    private readonly retailSalePdfService;
+    constructor(retailSaleService: RetailSaleService, retailSalePdfService: RetailSalePdfService);
     create(createRetailSaleDto: CreateRetailSaleDto): Promise<import("./dto").RetailSaleResponseDto>;
     findAll(page?: number, limit?: number, search?: string, startDate?: string, endDate?: string, paymentMethod?: string): Promise<{
         sales: {
@@ -45,4 +48,6 @@ export declare class RetailSaleController {
     remove(id: string): Promise<{
         message: string;
     }>;
+    generateInvoice(retailSaleId: string, res: Response): Promise<void>;
+    generateReceipt(retailSaleId: string, res: Response): Promise<void>;
 }

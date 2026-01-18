@@ -1,5 +1,7 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Query, Param, Res, HttpStatus } from '@nestjs/common';
+import { Response } from 'express';
 import { ReportService } from './report.service';
+import { ReportPdfService } from './report-pdf.service';
 import { DateRangeDto, PeriodQueryDto, PaginationQueryDto } from './dto/report-query.dto';
 import {
   InventorySummaryDto,
@@ -22,7 +24,10 @@ import {
 
 @Controller('reports')
 export class ReportController {
-  constructor(private readonly reportService: ReportService) {}
+  constructor(
+    private readonly reportService: ReportService,
+    private readonly reportPdfService: ReportPdfService,
+  ) {}
 
   // ==================== INVENTORY REPORTS ====================
 
@@ -167,5 +172,43 @@ export class ReportController {
         activeEmployees: salarySummary.activeEmployees,
       },
     };
+  }
+
+  // ==================== PDF REPORTS ====================
+
+  // In your controller
+  @Get('pdf/:type')
+  async generateReport(
+    @Param('type') type: string,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Res() res?: Response,
+  ) {
+    try {
+      const yearNum = year ? parseInt(year, 10) : undefined;
+      const monthNum = month ? parseInt(month, 10) : undefined;
+
+      const buffer = await this.reportPdfService.generateReport(
+        type as any,
+        yearNum,
+        monthNum
+      );
+      
+      const filename = `${type}-report-${yearNum || 'all'}-${monthNum || 'all'}.pdf`;
+      
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': buffer.length,
+      });
+      
+      return res.send(buffer);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to generate report',
+        error: error.message,
+      });
+    }
   }
 }

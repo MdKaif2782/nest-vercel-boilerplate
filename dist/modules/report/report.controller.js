@@ -15,10 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReportController = void 0;
 const common_1 = require("@nestjs/common");
 const report_service_1 = require("./report.service");
+const report_pdf_service_1 = require("./report-pdf.service");
 const report_query_dto_1 = require("./dto/report-query.dto");
 let ReportController = class ReportController {
-    constructor(reportService) {
+    constructor(reportService, reportPdfService) {
         this.reportService = reportService;
+        this.reportPdfService = reportPdfService;
     }
     async getInventorySummary() {
         return this.reportService.getInventorySummary();
@@ -103,6 +105,27 @@ let ReportController = class ReportController {
                 activeEmployees: salarySummary.activeEmployees,
             },
         };
+    }
+    async generateReport(type, year, month, res) {
+        try {
+            const yearNum = year ? parseInt(year, 10) : undefined;
+            const monthNum = month ? parseInt(month, 10) : undefined;
+            const buffer = await this.reportPdfService.generateReport(type, yearNum, monthNum);
+            const filename = `${type}-report-${yearNum || 'all'}-${monthNum || 'all'}.pdf`;
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Content-Length': buffer.length,
+            });
+            return res.send(buffer);
+        }
+        catch (error) {
+            console.error('Error generating report:', error);
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Failed to generate report',
+                error: error.message,
+            });
+        }
     }
 };
 exports.ReportController = ReportController;
@@ -216,8 +239,19 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ReportController.prototype, "getQuickStats", null);
+__decorate([
+    (0, common_1.Get)('pdf/:type'),
+    __param(0, (0, common_1.Param)('type')),
+    __param(1, (0, common_1.Query)('year')),
+    __param(2, (0, common_1.Query)('month')),
+    __param(3, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:returntype", Promise)
+], ReportController.prototype, "generateReport", null);
 exports.ReportController = ReportController = __decorate([
     (0, common_1.Controller)('reports'),
-    __metadata("design:paramtypes", [report_service_1.ReportService])
+    __metadata("design:paramtypes", [report_service_1.ReportService,
+        report_pdf_service_1.ReportPdfService])
 ], ReportController);
 //# sourceMappingURL=report.controller.js.map

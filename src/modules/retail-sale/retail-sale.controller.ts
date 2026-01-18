@@ -7,14 +7,20 @@ import {
   Query, 
   Delete,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { RetailSaleService } from './retail-sale.service';
+import { RetailSalePdfService } from './retail-sale-pdf.service';
 import { CreateRetailSaleDto } from './dto';
 import { AccessTokenGuard } from '../auth/auth.guard';
 
 @Controller('retail-sales')
 export class RetailSaleController {
-  constructor(private readonly retailSaleService: RetailSaleService) {}
+  constructor(
+    private readonly retailSaleService: RetailSaleService,
+    private readonly retailSalePdfService: RetailSalePdfService,
+  ) {}
 
   @Post()
   create(@Body() createRetailSaleDto: CreateRetailSaleDto) {
@@ -58,4 +64,29 @@ export class RetailSaleController {
   remove(@Param('id') id: string) {
     return this.retailSaleService.deleteRetailSale(id);
   }
+
+// In your controller
+@Get('invoice/:id')
+async generateInvoice(@Param('id') retailSaleId: string, @Res() res: Response) {
+  const buffer = await this.retailSalePdfService.generateSalesInvoice(retailSaleId);
+  
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="invoice-${retailSaleId}.pdf"`
+  });
+  
+  res.send(buffer);
+}
+
+@Get('receipt/:id')
+async generateReceipt(@Param('id') retailSaleId: string, @Res() res: Response) {
+  const buffer = await this.retailSalePdfService.generateReceipt(retailSaleId);
+  
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="receipt-${retailSaleId}.pdf"`
+  });
+  
+  res.send(buffer);
+}
 }
