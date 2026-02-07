@@ -1,3 +1,4 @@
+import { PaymentMethod } from '@prisma/client';
 export declare class CreateEmployeeDto {
     name: string;
     email: string;
@@ -42,6 +43,20 @@ export declare class PaySalaryDto {
     month: number;
     year: number;
     paidDate: string;
+    advanceDeduction?: number;
+    paymentMethod?: PaymentMethod;
+    reference?: string;
+    notes?: string;
+}
+export declare class GiveAdvanceDto {
+    amount: number;
+    description?: string;
+    paymentMethod?: PaymentMethod;
+    reference?: string;
+}
+export declare class AdjustAdvanceDto {
+    amount: number;
+    description: string;
 }
 export declare class SalaryPaymentDto {
     salaryId: string;

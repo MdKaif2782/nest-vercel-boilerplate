@@ -3,6 +3,7 @@ import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto, MarkAsReceivedDto, Crea
 export declare class PurchaseOrderService {
     private readonly database;
     constructor(database: DatabaseService);
+    private getSystemUserId;
     private generatePONumber;
     private findOrCreateSelfInvestor;
     private validateAndProcessInvestments;

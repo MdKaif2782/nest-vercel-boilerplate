@@ -1,36 +1,59 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateEmployeeDto } from './dto';
-import { UpdateEmployeeDto } from './dto';
-import { CreateSalaryDto } from './dto';
-import { PaySalaryDto } from './dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import {
+  CreateEmployeeDto,
+  UpdateEmployeeDto,
+  CreateSalaryDto,
+  PaySalaryDto,
+  GiveAdvanceDto,
+  AdjustAdvanceDto,
+} from './dto';
 import { DatabaseService } from '../database/database.service';
+import { PaymentMethod, ExpenseCategory, ExpenseStatus } from '@prisma/client';
 
 @Injectable()
 export class EmployeeService {
-  constructor(private prisma: DatabaseService) { }
+  constructor(private prisma: DatabaseService) {}
+
+  /**
+   * Get an admin user ID for auto-generated expense records.
+   */
+  private async getSystemUserId(): Promise<string> {
+    const admin = await this.prisma.user.findFirst({
+      where: { role: 'ADMIN' },
+      select: { id: true },
+    });
+    if (!admin) {
+      const anyUser = await this.prisma.user.findFirst({ select: { id: true } });
+      return anyUser?.id || 'system';
+    }
+    return admin.id;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  EMPLOYEE CRUD
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   private async generateEmployeeId(): Promise<string> {
     const lastEmployee = await this.prisma.employee.findFirst({
       orderBy: { createdAt: 'desc' },
-      select: { employeeId: true }
+      select: { employeeId: true },
     });
 
     if (!lastEmployee) return 'EMP-00001';
 
     const lastNumber = parseInt(lastEmployee.employeeId.split('-')[1]) || 0;
-    const nextNumber = lastNumber + 1;
-
-    return `EMP-${nextNumber.toString().padStart(5, '0')}`;
+    return `EMP-${(lastNumber + 1).toString().padStart(5, '0')}`;
   }
 
   async create(createEmployeeDto: CreateEmployeeDto) {
     const employeeId = await this.generateEmployeeId();
-
     return this.prisma.employee.create({
-      data: {
-        ...createEmployeeDto,
-        employeeId,
-      },
+      data: { ...createEmployeeDto, employeeId },
     });
   }
 
@@ -38,17 +61,12 @@ export class EmployeeService {
     return this.prisma.employee.findMany({
       where: { isActive: true },
       include: {
-        user: {
-          select: { name: true, email: true }
-        },
+        user: { select: { name: true, email: true } },
         salaries: {
-          orderBy: [
-            { year: 'desc' },
-            { month: 'desc' }
-          ],
-          take: 1
-        }
-      }
+          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+          take: 1,
+        },
+      },
     });
   }
 
@@ -56,16 +74,15 @@ export class EmployeeService {
     const employee = await this.prisma.employee.findUnique({
       where: { id },
       include: {
-        user: {
-          select: { name: true, email: true }
-        },
+        user: { select: { name: true, email: true } },
         salaries: {
-          orderBy: [
-            { year: 'desc' },
-            { month: 'desc' }
-          ],
-        }
-      }
+          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        },
+        advances: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
     });
 
     if (!employee) {
@@ -76,8 +93,7 @@ export class EmployeeService {
   }
 
   async update(id: string, updateEmployeeDto: UpdateEmployeeDto) {
-    await this.findOne(id); // Check if employee exists
-
+    await this.findOne(id);
     return this.prisma.employee.update({
       where: { id },
       data: updateEmployeeDto,
@@ -85,18 +101,275 @@ export class EmployeeService {
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Check if employee exists
-
+    await this.findOne(id);
     return this.prisma.employee.update({
       where: { id },
       data: { isActive: false },
     });
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  ADVANCE MANAGEMENT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * Give advance money to an employee.
+   * Increases their advanceBalance.
+   */
+  async giveAdvance(employeeId: string, dto: GiveAdvanceDto) {
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Advance amount must be greater than 0');
+    }
+
+    const newBalance = employee.advanceBalance + dto.amount;
+
+    const [advance] = await this.prisma.$transaction([
+      this.prisma.employeeAdvance.create({
+        data: {
+          employeeId,
+          amount: dto.amount,
+          type: 'GIVEN',
+          description: dto.description || 'Advance payment',
+          paymentMethod: dto.paymentMethod,
+          reference: dto.reference,
+          balanceAfter: newBalance,
+        },
+      }),
+      this.prisma.employee.update({
+        where: { id: employeeId },
+        data: { advanceBalance: newBalance },
+      }),
+    ]);
+
+    // Auto-create expense record
+    try {
+      const systemUserId = await this.getSystemUserId();
+      await this.prisma.expense.create({
+        data: {
+          title: `Employee Advance - ${employee.name}`,
+          description: dto.description || `Advance payment to ${employee.name} (${employee.employeeId})`,
+          amount: dto.amount,
+          category: ExpenseCategory.EMPLOYEE_ADVANCE,
+          expenseDate: new Date(),
+          paymentMethod: dto.paymentMethod || 'CASH',
+          status: ExpenseStatus.APPROVED,
+          isAutoGenerated: true,
+          employeeAdvanceId: advance.id,
+          recordedBy: systemUserId,
+        },
+      });
+    } catch (_) {
+      // Don't fail the main operation if expense logging fails
+    }
+
+    return {
+      success: true,
+      advance,
+      employee: {
+        id: employee.id,
+        name: employee.name,
+        previousBalance: employee.advanceBalance,
+        newBalance,
+      },
+    };
+  }
+
+  /**
+   * Manually adjust advance balance (correction, write-off, etc.)
+   */
+  async adjustAdvance(employeeId: string, dto: AdjustAdvanceDto) {
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+
+    const newBalance = employee.advanceBalance + dto.amount;
+
+    if (newBalance < 0) {
+      throw new BadRequestException(
+        `Adjustment would result in negative balance. Current balance: ${employee.advanceBalance}`,
+      );
+    }
+
+    const [advance] = await this.prisma.$transaction([
+      this.prisma.employeeAdvance.create({
+        data: {
+          employeeId,
+          amount: Math.abs(dto.amount),
+          type: 'ADJUSTMENT',
+          description: dto.description,
+          balanceAfter: newBalance,
+        },
+      }),
+      this.prisma.employee.update({
+        where: { id: employeeId },
+        data: { advanceBalance: newBalance },
+      }),
+    ]);
+
+    return {
+      success: true,
+      advance,
+      employee: {
+        id: employee.id,
+        name: employee.name,
+        previousBalance: employee.advanceBalance,
+        newBalance,
+      },
+    };
+  }
+
+  /**
+   * Get advance history for an employee with pagination.
+   */
+  async getAdvanceHistory(
+    employeeId: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    await this.findOne(employeeId);
+
+    const skip = (page - 1) * limit;
+
+    const [advances, total] = await Promise.all([
+      this.prisma.employeeAdvance.findMany({
+        where: { employeeId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          salary: {
+            select: { month: true, year: true },
+          },
+        },
+      }),
+      this.prisma.employeeAdvance.count({ where: { employeeId } }),
+    ]);
+
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { id: true, name: true, advanceBalance: true },
+    });
+
+    return {
+      employee,
+      advances,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Get advance summary for all active employees (overview screen).
+   */
+  async getAdvanceOverview() {
+    const employees = await this.prisma.employee.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        designation: true,
+        advanceBalance: true,
+        advances: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { amount: true, type: true, createdAt: true },
+        },
+      },
+      orderBy: { advanceBalance: 'desc' },
+    });
+
+    const totalOutstanding = employees.reduce(
+      (sum, e) => sum + e.advanceBalance,
+      0,
+    );
+    const employeesWithAdvance = employees.filter(
+      (e) => e.advanceBalance > 0,
+    );
+
+    return {
+      summary: {
+        totalOutstandingAdvance: totalOutstanding,
+        employeesWithAdvance: employeesWithAdvance.length,
+        totalActiveEmployees: employees.length,
+      },
+      employees: employees.map((e) => ({
+        id: e.id,
+        employeeId: e.employeeId,
+        name: e.name,
+        designation: e.designation,
+        advanceBalance: e.advanceBalance,
+        lastAdvanceTransaction: e.advances[0] || null,
+      })),
+    };
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  SALARY MANAGEMENT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * Calculate salary components from employee data.
+   */
+  private calculateSalaryComponents(
+    employee: any,
+    salaryData: CreateSalaryDto,
+  ) {
+    const {
+      baseSalary,
+      homeRentAllowance,
+      healthAllowance,
+      travelAllowance,
+      mobileAllowance,
+      otherAllowances,
+      overtimeRate,
+    } = employee;
+
+    const overtimeAmount =
+      salaryData.overtimeHours
+        ? salaryData.overtimeHours * (overtimeRate || 0)
+        : 0;
+
+    const totalAllowances =
+      homeRentAllowance +
+      healthAllowance +
+      travelAllowance +
+      mobileAllowance +
+      otherAllowances;
+
+    const grossSalary =
+      baseSalary +
+      totalAllowances +
+      overtimeAmount +
+      (salaryData.bonus || 0) -
+      (salaryData.deductions || 0);
+
+    // netSalary is same as grossSalary at creation time.
+    // Advance deduction happens only when PAYING.
+    return {
+      baseSalary,
+      allowances: totalAllowances,
+      overtimeHours: salaryData.overtimeHours || 0,
+      overtimeAmount,
+      bonus: salaryData.bonus || 0,
+      deductions: salaryData.deductions || 0,
+      grossSalary,
+      netSalary: grossSalary,
+      advanceDeduction: 0,
+    };
+  }
+
+  /**
+   * Create a salary record for a single employee for a specific month.
+   */
   async createSalary(createSalaryDto: CreateSalaryDto) {
     const employee = await this.findOne(createSalaryDto.employeeId);
 
-    // Check if salary already exists for this month/year
     const existingSalary = await this.prisma.salary.findUnique({
       where: {
         employeeId_month_year: {
@@ -108,20 +381,33 @@ export class EmployeeService {
     });
 
     if (existingSalary) {
-      throw new Error('Salary record already exists for this month and year');
+      throw new ConflictException(
+        'Salary record already exists for this month and year',
+      );
     }
 
-    // Calculate salary components
-    const salaryComponents = this.calculateSalaryComponents(employee, createSalaryDto);
+    const components = this.calculateSalaryComponents(
+      employee,
+      createSalaryDto,
+    );
 
     return this.prisma.salary.create({
       data: {
         ...createSalaryDto,
-        ...salaryComponents,
+        ...components,
       },
     });
   }
 
+  /**
+   * Pay salary — handles advance deduction, records payment details.
+   *
+   * Logic:
+   *  1. Find the PENDING salary record.
+   *  2. Determine advance deduction (auto or user-specified).
+   *  3. Calculate final net salary = grossSalary - advanceDeduction.
+   *  4. In a transaction: update salary, update employee advanceBalance, create advance recovery record.
+   */
   async paySalary(paySalaryDto: PaySalaryDto) {
     const salary = await this.prisma.salary.findUnique({
       where: {
@@ -139,31 +425,197 @@ export class EmployeeService {
     }
 
     if (salary.status === 'PAID') {
-      throw new Error('Salary already paid');
+      throw new ConflictException('Salary already paid');
     }
 
-    // Update salary status
-    const updatedSalary = await this.prisma.salary.update({
-      where: { id: salary.id },
-      data: {
-        status: 'PAID',
-        paidDate: paySalaryDto.paidDate,
+    const employee = salary.employee;
+    const currentAdvanceBalance = employee.advanceBalance;
+
+    // Determine advance deduction amount
+    let advanceDeduction: number;
+
+    if (paySalaryDto.advanceDeduction !== undefined) {
+      // User explicitly specified the deduction amount
+      advanceDeduction = paySalaryDto.advanceDeduction;
+
+      if (advanceDeduction < 0) {
+        throw new BadRequestException(
+          'Advance deduction cannot be negative',
+        );
+      }
+      if (advanceDeduction > currentAdvanceBalance) {
+        throw new BadRequestException(
+          `Advance deduction (${advanceDeduction}) exceeds current advance balance (${currentAdvanceBalance})`,
+        );
+      }
+      if (advanceDeduction > salary.grossSalary) {
+        throw new BadRequestException(
+          `Advance deduction (${advanceDeduction}) cannot exceed gross salary (${salary.grossSalary})`,
+        );
+      }
+    } else {
+      // Auto-deduct: deduct whatever is smaller — advance balance or gross salary
+      advanceDeduction = Math.min(currentAdvanceBalance, salary.grossSalary);
+    }
+
+    const netSalary = salary.grossSalary - advanceDeduction;
+    const newAdvanceBalance = currentAdvanceBalance - advanceDeduction;
+
+    // Execute everything in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Update salary record
+      const updatedSalary = await tx.salary.update({
+        where: { id: salary.id },
+        data: {
+          status: 'PAID',
+          paidDate: paySalaryDto.paidDate,
+          advanceDeduction,
+          netSalary,
+          paymentMethod: paySalaryDto.paymentMethod,
+          reference: paySalaryDto.reference,
+          notes: paySalaryDto.notes,
+        },
+      });
+
+      // 2. Update employee advance balance
+      await tx.employee.update({
+        where: { id: employee.id },
+        data: { advanceBalance: newAdvanceBalance },
+      });
+
+      // 3. Create advance recovery record (only if deduction > 0)
+      let advanceRecord = null;
+      if (advanceDeduction > 0) {
+        advanceRecord = await tx.employeeAdvance.create({
+          data: {
+            employeeId: employee.id,
+            amount: advanceDeduction,
+            type: 'RECOVERED',
+            description: `Recovered from ${this.getMonthName(salary.month)} ${salary.year} salary`,
+            balanceAfter: newAdvanceBalance,
+            salaryId: salary.id,
+          },
+        });
+      }
+
+      // 4. Auto-create expense record for salary payment
+      const systemUserId = await this.getSystemUserId();
+      await tx.expense.create({
+        data: {
+          title: `Salary - ${employee.name} (${this.getMonthName(salary.month)} ${salary.year})`,
+          description: `Net salary payment to ${employee.name} (${employee.employeeId}). Gross: ${salary.grossSalary}, Advance Deducted: ${advanceDeduction}`,
+          amount: netSalary,
+          category: ExpenseCategory.SALARY,
+          expenseDate: paySalaryDto.paidDate || new Date(),
+          paymentMethod: paySalaryDto.paymentMethod || 'BANK_TRANSFER',
+          status: ExpenseStatus.APPROVED,
+          isAutoGenerated: true,
+          salaryId: updatedSalary.id,
+          recordedBy: systemUserId,
+        },
+      });
+
+      return { updatedSalary, advanceRecord };
+    });
+
+    return {
+      success: true,
+      salary: result.updatedSalary,
+      advanceDeduction: {
+        deducted: advanceDeduction,
+        previousBalance: currentAdvanceBalance,
+        newBalance: newAdvanceBalance,
+        recoveryRecord: result.advanceRecord,
+      },
+      payment: {
+        grossSalary: salary.grossSalary,
+        advanceDeducted: advanceDeduction,
+        netPaid: netSalary,
+        paymentMethod: paySalaryDto.paymentMethod || null,
+        reference: paySalaryDto.reference || null,
+      },
+      employee: {
+        id: employee.id,
+        name: employee.name,
+        designation: employee.designation,
+      },
+    };
+  }
+
+  /**
+   * Get salary slip / preview for a specific month BEFORE paying.
+   * Shows what the payment would look like including advance deduction.
+   */
+  async getSalaryPreview(employeeId: string, month: number, year: number) {
+    const salary = await this.prisma.salary.findUnique({
+      where: {
+        employeeId_month_year: { employeeId, month, year },
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            employeeId: true,
+            name: true,
+            designation: true,
+            advanceBalance: true,
+            baseSalary: true,
+            homeRentAllowance: true,
+            healthAllowance: true,
+            travelAllowance: true,
+            mobileAllowance: true,
+            otherAllowances: true,
+          },
+        },
       },
     });
 
-    //create the expense record
-    return updatedSalary;
+    if (!salary) {
+      throw new NotFoundException(
+        `Salary record not found for ${this.getMonthName(month)} ${year}`,
+      );
+    }
+
+    const advanceBalance = salary.employee.advanceBalance;
+    const suggestedDeduction = Math.min(advanceBalance, salary.grossSalary);
+
+    return {
+      salary: {
+        id: salary.id,
+        month: salary.month,
+        year: salary.year,
+        monthName: this.getMonthName(salary.month),
+        status: salary.status,
+        baseSalary: salary.baseSalary,
+        allowances: salary.allowances,
+        overtimeHours: salary.overtimeHours,
+        overtimeAmount: salary.overtimeAmount,
+        bonus: salary.bonus,
+        deductions: salary.deductions,
+        grossSalary: salary.grossSalary,
+        paidDate: salary.paidDate,
+        paymentMethod: salary.paymentMethod,
+        reference: salary.reference,
+        notes: salary.notes,
+        // If already paid, show actual values
+        advanceDeduction: salary.status === 'PAID' ? salary.advanceDeduction : null,
+        netSalary: salary.status === 'PAID' ? salary.netSalary : null,
+      },
+      employee: salary.employee,
+      advance: {
+        currentBalance: advanceBalance,
+        suggestedDeduction,
+        netAfterDeduction: salary.grossSalary - suggestedDeduction,
+        maxDeduction: Math.min(advanceBalance, salary.grossSalary),
+      },
+    };
   }
 
   async getSalaries(employeeId: string) {
-    await this.findOne(employeeId); // Check if employee exists
-
+    await this.findOne(employeeId);
     return this.prisma.salary.findMany({
       where: { employeeId },
-      orderBy: [
-        { year: 'desc' },
-        { month: 'desc' }
-      ],
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
   }
 
@@ -172,86 +624,87 @@ export class EmployeeService {
       where: { month, year },
       include: {
         employee: {
-          select: { name: true, designation: true, employeeId: true }
-        }
+          select: {
+            name: true,
+            designation: true,
+            employeeId: true,
+            advanceBalance: true,
+          },
+        },
       },
-      orderBy: { employee: { name: 'asc' } }
+      orderBy: { employee: { name: 'asc' } },
     });
   }
 
-  // NEW METHOD: Generate Monthly Salaries for All Active Employees
-  async generateMonthlySalaries(month?: number, year?: number) {
-    const currentDate = new Date();
-    const currentMonth = month || currentDate.getMonth() + 1;
-    const currentYear = year || currentDate.getFullYear();
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  BULK: GENERATE MONTHLY SALARIES
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    // Get all active employees
+  async generateMonthlySalaries(month?: number, year?: number) {
+    const now = new Date();
+    const currentMonth = month || now.getMonth() + 1;
+    const currentYear = year || now.getFullYear();
+
     const activeEmployees = await this.prisma.employee.findMany({
       where: { isActive: true },
       include: {
         salaries: {
-          where: {
-            month: currentMonth,
-            year: currentYear
-          }
-        }
-      }
+          where: { month: currentMonth, year: currentYear },
+        },
+      },
     });
 
     const results = {
       created: [] as any[],
       skipped: [] as any[],
-      errors: [] as any[]
+      errors: [] as any[],
     };
 
-    // Generate salary for each active employee
     for (const employee of activeEmployees) {
       try {
-        // Check if salary already exists for this month
-        const existingSalary = employee.salaries.find(s => 
-          s.month === currentMonth && s.year === currentYear
-        );
-
-        if (existingSalary) {
+        if (
+          employee.salaries.find(
+            (s) => s.month === currentMonth && s.year === currentYear,
+          )
+        ) {
           results.skipped.push({
             employeeId: employee.id,
             employeeName: employee.name,
-            reason: 'Salary record already exists for this month'
+            reason: 'Salary record already exists for this month',
           });
           continue;
         }
 
-        // Create salary record with zero overtime, bonus, deductions
         const salaryData: CreateSalaryDto = {
           employeeId: employee.id,
           month: currentMonth,
           year: currentYear,
           overtimeHours: 0,
           bonus: 0,
-          deductions: 0
+          deductions: 0,
         };
 
-        const salaryComponents = this.calculateSalaryComponents(employee, salaryData);
-        
+        const components = this.calculateSalaryComponents(
+          employee,
+          salaryData,
+        );
+
         const newSalary = await this.prisma.salary.create({
-          data: {
-            ...salaryData,
-            ...salaryComponents,
-          },
+          data: { ...salaryData, ...components },
         });
 
         results.created.push({
           employeeId: employee.id,
           employeeName: employee.name,
           salaryId: newSalary.id,
-          netSalary: newSalary.netSalary
+          grossSalary: newSalary.grossSalary,
+          advanceBalance: employee.advanceBalance,
         });
-
       } catch (error) {
         results.errors.push({
           employeeId: employee.id,
           employeeName: employee.name,
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -263,110 +716,129 @@ export class EmployeeService {
         totalEmployees: activeEmployees.length,
         created: results.created.length,
         skipped: results.skipped.length,
-        errors: results.errors.length
+        errors: results.errors.length,
       },
-      details: results
+      details: results,
     };
   }
 
-  // New Methods for Payables and Statistics
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  PAYABLES, STATISTICS, TRENDS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   async getPayables(month?: number, year?: number) {
-    const currentDate = new Date();
-    const currentMonth = month || currentDate.getMonth() + 1;
-    const currentYear = year || currentDate.getFullYear();
+    const now = new Date();
+    const currentMonth = month || now.getMonth() + 1;
+    const currentYear = year || now.getFullYear();
 
     const unpaidSalaries = await this.prisma.salary.findMany({
-      where: {
-        month: currentMonth,
-        year: currentYear,
-        status: 'PENDING'
-      },
+      where: { month: currentMonth, year: currentYear, status: 'PENDING' },
       include: {
         employee: {
           select: {
             name: true,
             designation: true,
-            employeeId: true
-          }
-        }
+            employeeId: true,
+            advanceBalance: true,
+          },
+        },
       },
-      orderBy: { employee: { name: 'asc' } }
+      orderBy: { employee: { name: 'asc' } },
     });
 
     const paidSalaries = await this.prisma.salary.findMany({
-      where: {
-        month: currentMonth,
-        year: currentYear,
-        status: 'PAID'
-      },
+      where: { month: currentMonth, year: currentYear, status: 'PAID' },
       include: {
         employee: {
           select: {
             name: true,
             designation: true,
-            employeeId: true
-          }
-        }
+            employeeId: true,
+            advanceBalance: true,
+          },
+        },
       },
-      orderBy: { employee: { name: 'asc' } }
+      orderBy: { employee: { name: 'asc' } },
     });
 
+    // Enhance unpaid with projected deduction info
+    const unpaidWithAdvanceInfo = unpaidSalaries.map((s) => ({
+      ...s,
+      advanceInfo: {
+        currentBalance: s.employee.advanceBalance,
+        suggestedDeduction: Math.min(
+          s.employee.advanceBalance,
+          s.grossSalary,
+        ),
+        projectedNetPay:
+          s.grossSalary -
+          Math.min(s.employee.advanceBalance, s.grossSalary),
+      },
+    }));
+
     return {
-      unpaid: unpaidSalaries,
+      unpaid: unpaidWithAdvanceInfo,
       paid: paidSalaries,
       month: currentMonth,
-      year: currentYear
+      year: currentYear,
     };
   }
 
   async getSalaryStatistics(month?: number, year?: number) {
-    const currentDate = new Date();
-    const currentMonth = month || currentDate.getMonth() + 1;
-    const currentYear = year || currentDate.getFullYear();
+    const now = new Date();
+    const currentMonth = month || now.getMonth() + 1;
+    const currentYear = year || now.getFullYear();
 
-    // Current month statistics
     const currentMonthSalaries = await this.prisma.salary.findMany({
-      where: {
-        month: currentMonth,
-        year: currentYear
-      }
+      where: { month: currentMonth, year: currentYear },
     });
 
-    // Year-to-date statistics
     const ytdSalaries = await this.prisma.salary.findMany({
-      where: {
-        year: currentYear,
-        status: 'PAID'
-      }
+      where: { year: currentYear, status: 'PAID' },
     });
 
-    // Total statistics (all time)
     const allTimeSalaries = await this.prisma.salary.findMany({
-      where: {
-        status: 'PAID'
-      }
+      where: { status: 'PAID' },
     });
 
-    // Calculate totals
     const currentMonthTotal = currentMonthSalaries
-      .filter(s => s.status === 'PAID')
-      .reduce((sum, salary) => sum + salary.netSalary, 0);
+      .filter((s) => s.status === 'PAID')
+      .reduce((sum, s) => sum + s.netSalary, 0);
 
     const currentMonthPending = currentMonthSalaries
-      .filter(s => s.status === 'PENDING')
-      .reduce((sum, salary) => sum + salary.netSalary, 0);
+      .filter((s) => s.status === 'PENDING')
+      .reduce((sum, s) => sum + s.grossSalary, 0);
 
-    const ytdTotal = ytdSalaries.reduce((sum, salary) => sum + salary.netSalary, 0);
-    const allTimeTotal = allTimeSalaries.reduce((sum, salary) => sum + salary.netSalary, 0);
+    const totalAdvanceDeductedThisMonth = currentMonthSalaries
+      .filter((s) => s.status === 'PAID')
+      .reduce((sum, s) => sum + s.advanceDeduction, 0);
 
-    // Employee counts
+    const ytdTotal = ytdSalaries.reduce((sum, s) => sum + s.netSalary, 0);
+    const ytdAdvanceDeductions = ytdSalaries.reduce(
+      (sum, s) => sum + s.advanceDeduction,
+      0,
+    );
+    const allTimeTotal = allTimeSalaries.reduce(
+      (sum, s) => sum + s.netSalary,
+      0,
+    );
+
     const totalEmployees = await this.prisma.employee.count({
-      where: { isActive: true }
+      where: { isActive: true },
     });
 
-    const paidThisMonth = currentMonthSalaries.filter(s => s.status === 'PAID').length;
-    const pendingThisMonth = currentMonthSalaries.filter(s => s.status === 'PENDING').length;
+    // Advance summary
+    const totalOutstandingAdvance = await this.prisma.employee.aggregate({
+      where: { isActive: true },
+      _sum: { advanceBalance: true },
+    });
+
+    const paidThisMonth = currentMonthSalaries.filter(
+      (s) => s.status === 'PAID',
+    ).length;
+    const pendingThisMonth = currentMonthSalaries.filter(
+      (s) => s.status === 'PENDING',
+    ).length;
 
     return {
       currentMonth: {
@@ -374,106 +846,83 @@ export class EmployeeService {
         year: currentYear,
         totalPaid: currentMonthTotal,
         totalPending: currentMonthPending,
+        totalAdvanceDeducted: totalAdvanceDeductedThisMonth,
         paidEmployees: paidThisMonth,
         pendingEmployees: pendingThisMonth,
-        totalEmployees: currentMonthSalaries.length
+        totalEmployees: currentMonthSalaries.length,
       },
       yearToDate: {
         totalPaid: ytdTotal,
-        totalMonths: new Set(ytdSalaries.map(s => s.month)).size,
-        totalPayments: ytdSalaries.length
+        totalAdvanceDeducted: ytdAdvanceDeductions,
+        totalMonths: new Set(ytdSalaries.map((s) => s.month)).size,
+        totalPayments: ytdSalaries.length,
       },
       allTime: {
         totalPaid: allTimeTotal,
-        totalPayments: allTimeSalaries.length
+        totalPayments: allTimeSalaries.length,
       },
       employeeStats: {
         totalActive: totalEmployees,
         paidThisMonth,
-        pendingThisMonth
-      }
+        pendingThisMonth,
+      },
+      advanceSummary: {
+        totalOutstandingAdvance:
+          totalOutstandingAdvance._sum.advanceBalance || 0,
+      },
     };
   }
 
   async getMonthlyTrends(year?: number) {
     const currentYear = year || new Date().getFullYear();
-    
+
     const monthlyData = await this.prisma.salary.groupBy({
       by: ['month', 'status'],
-      where: {
-        year: currentYear
-      },
-      _sum: {
-        netSalary: true
-      },
-      _count: {
-        id: true
-      }
+      where: { year: currentYear },
+      _sum: { netSalary: true, advanceDeduction: true },
+      _count: { id: true },
     });
 
-    // Format the data for charts
     const trends = Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
-      const monthData = monthlyData.filter(d => d.month === month);
-      
-      const paid = monthData.find(d => d.status === 'PAID');
-      const pending = monthData.find(d => d.status === 'PENDING');
+      const monthData = monthlyData.filter((d) => d.month === month);
+      const paid = monthData.find((d) => d.status === 'PAID');
+      const pending = monthData.find((d) => d.status === 'PENDING');
 
       return {
         month,
+        monthName: this.getMonthName(month),
         paidAmount: paid?._sum?.netSalary || 0,
         pendingAmount: pending?._sum?.netSalary || 0,
+        advanceDeducted: paid?._sum?.advanceDeduction || 0,
         paidCount: paid?._count?.id || 0,
-        pendingCount: pending?._count?.id || 0
+        pendingCount: pending?._count?.id || 0,
       };
     });
 
-    return {
-      year: currentYear,
-      trends
-    };
+    return { year: currentYear, trends };
   }
 
-  private calculateTotalSalary(employeeData: CreateEmployeeDto | UpdateEmployeeDto): number {
-    return employeeData.baseSalary +
-      employeeData.homeRentAllowance +
-      employeeData.healthAllowance +
-      employeeData.travelAllowance +
-      employeeData.mobileAllowance +
-      employeeData.otherAllowances;
-  }
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  HELPERS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  private calculateSalaryComponents(employee: any, salaryData: CreateSalaryDto) {
-    const {
-      baseSalary,
-      homeRentAllowance,
-      healthAllowance,
-      travelAllowance,
-      mobileAllowance,
-      otherAllowances,
-      overtimeRate
-    } = employee;
-
-    // Calculate overtime amount
-    const overtimeAmount = salaryData.overtimeHours ?
-      salaryData.overtimeHours * (overtimeRate || 0) : 0;
-
-    // Calculate total allowances
-    const totalAllowances = homeRentAllowance + healthAllowance +
-      travelAllowance + mobileAllowance + otherAllowances;
-
-    // Calculate net salary
-    const netSalary = baseSalary + totalAllowances + overtimeAmount +
-      (salaryData.bonus || 0) - (salaryData.deductions || 0);
-
-    return {
-      baseSalary,
-      allowances: totalAllowances,
-      overtimeHours: salaryData.overtimeHours || 0,
-      overtimeAmount,
-      bonus: salaryData.bonus || 0,
-      deductions: salaryData.deductions || 0,
-      netSalary,
-    };
+  private getMonthName(month: number): string {
+    const months = [
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return months[month] || '';
   }
 }

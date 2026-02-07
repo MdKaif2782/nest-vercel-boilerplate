@@ -229,7 +229,27 @@ export class EmployeeStatsDto {
   @ApiProperty()
   averageSalary: number;
 
-  byDepartment: DepartmentStatsDto[];
+  @ApiProperty()
+  totalAdvanceOutstanding: number;
+
+  @ApiProperty()
+  totalSalaryPaidThisYear: number;
+
+  byDesignation: DesignationStatsDto[];
+}
+
+export class DesignationStatsDto {
+  @ApiProperty()
+  designation: string;
+
+  @ApiProperty()
+  count: number;
+
+  @ApiProperty()
+  avgSalary: number;
+
+  @ApiProperty()
+  color: string;
 }
 
 export class DepartmentStatsDto {

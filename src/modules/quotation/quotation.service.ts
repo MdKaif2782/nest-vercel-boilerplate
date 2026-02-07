@@ -400,7 +400,7 @@ async create(createQuotationDto: CreateQuotationDto) {
             title: `Commission for Quotation ${quotation.quotationNumber}`,
             description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}`,
             amount: acceptQuotationDto.commission,
-            category: ExpenseCategory.COMMISSIONS,
+            category: ExpenseCategory.OTHER,
             paymentMethod: PaymentMethod.CASH,
             status: ExpenseStatus.PENDING,
             notes: `Commission recorded for accepting quotation ${quotation.quotationNumber}`,

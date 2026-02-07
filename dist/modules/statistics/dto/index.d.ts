@@ -95,7 +95,15 @@ export declare class EmployeeStatsDto {
     activeEmployees: number;
     monthlySalary: number;
     averageSalary: number;
-    byDepartment: DepartmentStatsDto[];
+    totalAdvanceOutstanding: number;
+    totalSalaryPaidThisYear: number;
+    byDesignation: DesignationStatsDto[];
+}
+export declare class DesignationStatsDto {
+    designation: string;
+    count: number;
+    avgSalary: number;
+    color: string;
 }
 export declare class DepartmentStatsDto {
     department: string;

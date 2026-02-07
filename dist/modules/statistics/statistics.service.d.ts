@@ -22,6 +22,7 @@ export declare class StatisticsService {
     private getSalesSummary;
     private getTotalExpenses;
     private getPreviousPeriod;
+    private getMonthName;
     getSalesChartData(range?: DateRangeDto): Promise<ChartDataDto>;
     getExpenseChartData(range?: DateRangeDto): Promise<ChartDataDto>;
     getInventoryChartData(): Promise<ChartDataDto>;

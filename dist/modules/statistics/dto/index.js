@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DashboardStatsDto = exports.ChartDatasetDto = exports.ChartDataDto = exports.DateRangeDto = exports.QuickStatsDto = exports.ActivityLogDto = exports.BusinessHealthDto = exports.DepartmentStatsDto = exports.EmployeeStatsDto = exports.MonthlyExpenseDto = exports.ExpenseCategoryDto = exports.ExpenseBreakdownDto = exports.InvestorPerformanceDto = exports.InvestorMetricsDto = exports.AgingBucketDto = exports.ReceivablesSummaryDto = exports.InventoryCategoryDto = exports.InventoryOverviewDto = exports.TopProductDto = exports.SalesChannelDto = exports.PeriodicSalesDataDto = exports.SalesAnalyticsDto = exports.FinancialSummaryDto = void 0;
+exports.DashboardStatsDto = exports.ChartDatasetDto = exports.ChartDataDto = exports.DateRangeDto = exports.QuickStatsDto = exports.ActivityLogDto = exports.BusinessHealthDto = exports.DepartmentStatsDto = exports.DesignationStatsDto = exports.EmployeeStatsDto = exports.MonthlyExpenseDto = exports.ExpenseCategoryDto = exports.ExpenseBreakdownDto = exports.InvestorPerformanceDto = exports.InvestorMetricsDto = exports.AgingBucketDto = exports.ReceivablesSummaryDto = exports.InventoryCategoryDto = exports.InventoryOverviewDto = exports.TopProductDto = exports.SalesChannelDto = exports.PeriodicSalesDataDto = exports.SalesAnalyticsDto = exports.FinancialSummaryDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 class FinancialSummaryDto {
@@ -293,6 +293,33 @@ __decorate([
     (0, swagger_1.ApiProperty)(),
     __metadata("design:type", Number)
 ], EmployeeStatsDto.prototype, "averageSalary", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], EmployeeStatsDto.prototype, "totalAdvanceOutstanding", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], EmployeeStatsDto.prototype, "totalSalaryPaidThisYear", void 0);
+class DesignationStatsDto {
+}
+exports.DesignationStatsDto = DesignationStatsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], DesignationStatsDto.prototype, "designation", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], DesignationStatsDto.prototype, "count", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Number)
+], DesignationStatsDto.prototype, "avgSalary", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", String)
+], DesignationStatsDto.prototype, "color", void 0);
 class DepartmentStatsDto {
 }
 exports.DepartmentStatsDto = DepartmentStatsDto;

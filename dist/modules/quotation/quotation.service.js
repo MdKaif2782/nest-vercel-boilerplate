@@ -338,7 +338,7 @@ let QuotationService = class QuotationService {
                         title: `Commission for Quotation ${quotation.quotationNumber}`,
                         description: `Commission for quotation ${quotation.quotationNumber} to ${quotation.companyName}`,
                         amount: acceptQuotationDto.commission,
-                        category: client_1.ExpenseCategory.COMMISSIONS,
+                        category: client_1.ExpenseCategory.OTHER,
                         paymentMethod: client_1.PaymentMethod.CASH,
                         status: client_1.ExpenseStatus.PENDING,
                         notes: `Commission recorded for accepting quotation ${quotation.quotationNumber}`,

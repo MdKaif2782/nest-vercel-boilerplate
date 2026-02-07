@@ -20,7 +20,7 @@ import {
   InvestorPerformanceDto,
   ExpenseCategoryDto,
   MonthlyExpenseDto,
-  DepartmentStatsDto,
+  DesignationStatsDto,
   ChartDataDto,
   DateRangeDto,
 } from './dto';
@@ -81,12 +81,12 @@ export class StatisticsService {
     const currentExpenses = await this.getTotalExpenses(range);
     const previousExpenses = await this.getTotalExpenses(previousRange);
 
-    const revenueGrowth = previousSales.totalSales > 0 
-      ? ((currentSales.totalSales - previousSales.totalSales) / previousSales.totalSales) * 100 
+    const revenueGrowth = previousSales.totalSales > 0
+      ? ((currentSales.totalSales - previousSales.totalSales) / previousSales.totalSales) * 100
       : 0;
 
-    const expenseGrowth = previousExpenses > 0 
-      ? ((currentExpenses - previousExpenses) / previousExpenses) * 100 
+    const expenseGrowth = previousExpenses > 0
+      ? ((currentExpenses - previousExpenses) / previousExpenses) * 100
       : 0;
 
     return {
@@ -117,7 +117,6 @@ export class StatisticsService {
   }
 
   private async getMonthlySalesData(range?: DateRangeDto): Promise<PeriodicSalesDataDto[]> {
-    // Get last 6 months of sales data
     const months = 6;
     const monthlyData: PeriodicSalesDataDto[] = [];
 
@@ -135,15 +134,15 @@ export class StatisticsService {
       const sales = await this.getSalesSummary(monthRange);
       const previousMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
       const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0);
-      
+
       const previousRange: DateRangeDto = {
         startDate: previousMonth.toISOString().split('T')[0],
         endDate: previousEnd.toISOString().split('T')[0],
       };
 
       const previousSales = await this.getSalesSummary(previousRange);
-      const growth = previousSales.totalSales > 0 
-        ? ((sales.totalSales - previousSales.totalSales) / previousSales.totalSales) * 100 
+      const growth = previousSales.totalSales > 0
+        ? ((sales.totalSales - previousSales.totalSales) / previousSales.totalSales) * 100
         : 0;
 
       monthlyData.push({
@@ -162,20 +161,18 @@ export class StatisticsService {
     const sales = await this.getSalesSummary(range);
     const total = sales.totalSales;
 
-    const colors = ['#4f46e5', '#10b981', '#f59e0b'];
-
     return [
       {
         channel: 'Corporate',
         amount: sales.corporateSales,
         percentage: total > 0 ? (sales.corporateSales / total) * 100 : 0,
-        color: colors[0],
+        color: '#4f46e5',
       },
       {
         channel: 'Retail',
         amount: sales.retailSales,
         percentage: total > 0 ? (sales.retailSales / total) * 100 : 0,
-        color: colors[1],
+        color: '#10b981',
       },
     ];
   }
@@ -189,14 +186,10 @@ export class StatisticsService {
       };
     }
 
+    // Current period data
     const billItems = await this.prisma.billItem.findMany({
-      where: {
-        bill: where,
-      },
-      include: {
-        inventory: true,
-        bill: true,
-      },
+      where: { bill: where },
+      include: { inventory: true, bill: true },
     });
 
     const retailItems = await this.prisma.retailSaleItem.findMany({
@@ -208,47 +201,70 @@ export class StatisticsService {
           },
         } : undefined,
       },
-      include: {
-        inventory: true,
-      },
+      include: { inventory: true },
     });
 
-    const productSales = new Map();
+    // Previous period data for real growth calculation
+    const prevRange = this.getPreviousPeriod(range);
+    const prevWhere: any = {};
+    if (prevRange?.startDate && prevRange?.endDate) {
+      prevWhere.billDate = {
+        gte: new Date(prevRange.startDate),
+        lte: new Date(prevRange.endDate),
+      };
+    }
 
-    // Process bill items
+    const prevBillItems = await this.prisma.billItem.findMany({
+      where: { bill: prevWhere },
+      include: { inventory: true },
+    });
+
+    const prevRetailItems = await this.prisma.retailSaleItem.findMany({
+      where: {
+        retailSale: prevRange?.startDate && prevRange?.endDate ? {
+          saleDate: {
+            gte: new Date(prevRange.startDate),
+            lte: new Date(prevRange.endDate),
+          },
+        } : undefined,
+      },
+      include: { inventory: true },
+    });
+
+    // Build previous period sales map
+    const prevProductSales = new Map<string, number>();
+    prevBillItems.forEach(item => {
+      const name = item.inventory.productName;
+      prevProductSales.set(name, (prevProductSales.get(name) || 0) + item.totalPrice);
+    });
+    prevRetailItems.forEach(item => {
+      const name = item.inventory.productName;
+      prevProductSales.set(name, (prevProductSales.get(name) || 0) + item.totalPrice);
+    });
+
+    // Build current period sales map
+    const productSales = new Map<string, { sales: number; quantity: number }>();
+
     billItems.forEach(item => {
       const productName = item.inventory.productName;
-      const sales = item.totalPrice;
-      
       if (!productSales.has(productName)) {
-        productSales.set(productName, {
-          sales: 0,
-          quantity: 0,
-        });
+        productSales.set(productName, { sales: 0, quantity: 0 });
       }
-      
-      const current = productSales.get(productName);
+      const current = productSales.get(productName)!;
       productSales.set(productName, {
-        sales: current.sales + sales,
+        sales: current.sales + item.totalPrice,
         quantity: current.quantity + item.quantity,
       });
     });
 
-    // Process retail items
     retailItems.forEach(item => {
       const productName = item.inventory.productName;
-      const sales = item.totalPrice;
-      
       if (!productSales.has(productName)) {
-        productSales.set(productName, {
-          sales: 0,
-          quantity: 0,
-        });
+        productSales.set(productName, { sales: 0, quantity: 0 });
       }
-      
-      const current = productSales.get(productName);
+      const current = productSales.get(productName)!;
       productSales.set(productName, {
-        sales: current.sales + sales,
+        sales: current.sales + item.totalPrice,
         quantity: current.quantity + item.quantity,
       });
     });
@@ -256,12 +272,16 @@ export class StatisticsService {
     return Array.from(productSales.entries())
       .sort((a, b) => b[1].sales - a[1].sales)
       .slice(0, 5)
-      .map(([productName, data], index) => ({
-        productName,
-        sales: data.sales,
-        quantity: data.quantity,
-        growth: Math.random() * 20 - 5, // Mock growth for demo
-      }));
+      .map(([productName, data]) => {
+        const prevSales = prevProductSales.get(productName) || 0;
+        const growth = prevSales > 0 ? ((data.sales - prevSales) / prevSales) * 100 : 0;
+        return {
+          productName,
+          sales: data.sales,
+          quantity: data.quantity,
+          growth: Number(growth.toFixed(1)),
+        };
+      });
   }
 
   private async getSalesTrend(): Promise<'up' | 'down' | 'stable'> {
@@ -292,34 +312,70 @@ export class StatisticsService {
   // ==================== INVENTORY OVERVIEW ====================
 
   private async getInventoryOverview(): Promise<InventoryOverviewDto> {
-    const inventory = await this.prisma.inventory.findMany();
-    const lowStockItems = await this.prisma.inventory.findMany({
-      where: {
-        OR: [
-          {
-            minStockLevel: { not: null },
-            quantity: { lt: this.prisma.inventory.fields.minStockLevel },
-          },
-          {
-            minStockLevel: null,
-            quantity: { lte: 10 },
-          },
-        ],
+    const inventory = await this.prisma.inventory.findMany({
+      include: {
+        purchaseOrder: {
+          select: { vendorName: true },
+        },
       },
     });
 
     const outOfStockItems = inventory.filter(item => item.quantity === 0);
+    const lowStockItems = inventory.filter(item => {
+      if (item.minStockLevel !== null) return item.quantity > 0 && item.quantity < item.minStockLevel;
+      return item.quantity > 0 && item.quantity <= 10;
+    });
 
     const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0);
     const totalItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
 
-    // Mock category data - you might want to add category to your Inventory model
-    const byCategory: InventoryCategoryDto[] = [
-      { category: 'Electronics', value: totalValue * 0.4, percentage: 40, color: '#4f46e5' },
-      { category: 'Office Supplies', value: totalValue * 0.3, percentage: 30, color: '#10b981' },
-      { category: 'Furniture', value: totalValue * 0.2, percentage: 20, color: '#f59e0b' },
-      { category: 'Others', value: totalValue * 0.1, percentage: 10, color: '#ef4444' },
-    ];
+    // Group by vendor (real data instead of hardcoded categories)
+    const vendorMap = new Map<string, number>();
+    inventory.forEach(item => {
+      const vendor = item.purchaseOrder?.vendorName || 'Unknown';
+      vendorMap.set(vendor, (vendorMap.get(vendor) || 0) + (item.quantity * item.purchasePrice));
+    });
+
+    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'];
+    let colorIndex = 0;
+
+    const byCategory: InventoryCategoryDto[] = Array.from(vendorMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([vendor, value]) => ({
+        category: vendor,
+        value,
+        percentage: totalValue > 0 ? (value / totalValue) * 100 : 0,
+        color: colors[colorIndex++ % colors.length],
+      }));
+
+    // Calculate real turnover rate: COGS / average inventory value
+    const currentYear = new Date().getFullYear();
+    const billItems = await this.prisma.billItem.findMany({
+      where: {
+        bill: {
+          billDate: {
+            gte: new Date(currentYear, 0, 1),
+            lte: new Date(currentYear, 11, 31),
+          },
+        },
+      },
+      include: { inventory: true },
+    });
+    const retailItems = await this.prisma.retailSaleItem.findMany({
+      where: {
+        retailSale: {
+          saleDate: {
+            gte: new Date(currentYear, 0, 1),
+            lte: new Date(currentYear, 11, 31),
+          },
+        },
+      },
+      include: { inventory: true },
+    });
+
+    const cogs = billItems.reduce((sum, item) => sum + (item.quantity * item.inventory.purchasePrice), 0)
+               + retailItems.reduce((sum, item) => sum + (item.quantity * item.inventory.purchasePrice), 0);
+    const turnoverRate = totalValue > 0 ? Number((cogs / totalValue).toFixed(2)) : 0;
 
     return {
       totalValue,
@@ -327,7 +383,7 @@ export class StatisticsService {
       lowStockCount: lowStockItems.length,
       outOfStockCount: outOfStockItems.length,
       byCategory,
-      turnoverRate: 2.5, // Mock turnover rate
+      turnoverRate,
     };
   }
 
@@ -335,13 +391,11 @@ export class StatisticsService {
 
   private async getReceivablesSummary(): Promise<ReceivablesSummaryDto> {
     const bills = await this.prisma.bill.findMany({
-      include: {
-        payments: true,
-      },
+      include: { payments: true },
     });
 
     const totalReceivable = bills.reduce((sum, bill) => sum + bill.dueAmount, 0);
-    const totalCollected = bills.reduce((sum, bill) => 
+    const totalCollected = bills.reduce((sum, bill) =>
       sum + bill.payments.reduce((pSum, payment) => pSum + payment.amount, 0), 0
     );
     const totalBilled = bills.reduce((sum, bill) => sum + bill.totalAmount, 0);
@@ -350,17 +404,18 @@ export class StatisticsService {
     // Aging buckets
     const now = new Date();
     const agingBuckets = [
-      { name: '0-30 days', maxDays: 30, color: '#10b981' },
-      { name: '31-60 days', maxDays: 60, color: '#f59e0b' },
-      { name: '61-90 days', maxDays: 90, color: '#f97316' },
-      { name: '90+ days', maxDays: Infinity, color: '#ef4444' },
+      { name: '0-30 days', minDays: 0, maxDays: 30, color: '#10b981' },
+      { name: '31-60 days', minDays: 31, maxDays: 60, color: '#f59e0b' },
+      { name: '61-90 days', minDays: 61, maxDays: 90, color: '#f97316' },
+      { name: '90+ days', minDays: 91, maxDays: Infinity, color: '#ef4444' },
     ];
 
-    const buckets = agingBuckets.map((bucket) => {
+    const buckets: AgingBucketDto[] = agingBuckets.map((bucket) => {
       const bucketBills = bills.filter((bill) => {
+        if (bill.dueAmount <= 0) return false;
         const billDate = new Date(bill.billDate);
         const daysDiff = Math.floor((now.getTime() - billDate.getTime()) / (1000 * 60 * 60 * 24));
-        return daysDiff <= bucket.maxDays && daysDiff > (bucket.maxDays - 30);
+        return daysDiff >= bucket.minDays && daysDiff <= bucket.maxDays;
       });
 
       const amount = bucketBills.reduce((sum, bill) => sum + bill.dueAmount, 0);
@@ -376,7 +431,7 @@ export class StatisticsService {
     const thisMonth = new Date();
     const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
     const collectedThisMonth = bills.reduce((sum, bill) => {
-      const monthPayments = bill.payments.filter(p => 
+      const monthPayments = bill.payments.filter(p =>
         new Date(p.paymentDate) >= startOfMonth
       ).reduce((pSum, payment) => pSum + payment.amount, 0);
       return sum + monthPayments;
@@ -385,7 +440,7 @@ export class StatisticsService {
     return {
       totalReceivable,
       collectedThisMonth,
-      overdueAmount: buckets.slice(1).reduce((sum, bucket) => sum + bucket.amount, 0), // 31+ days
+      overdueAmount: buckets.filter(b => b.bucket !== '0-30 days').reduce((sum, bucket) => sum + bucket.amount, 0),
       collectionRate,
       agingBuckets: buckets,
     };
@@ -398,14 +453,23 @@ export class StatisticsService {
       include: {
         investments: {
           include: {
-            purchaseOrder: true,
+            purchaseOrder: {
+              include: {
+                inventory: {
+                  include: {
+                    billItems: true,
+                    retailItems: true,
+                  },
+                },
+              },
+            },
           },
         },
         investorPayments: true,
       },
     });
 
-    const totalInvestment = investors.reduce((sum, investor) => 
+    const totalInvestment = investors.reduce((sum, investor) =>
       sum + investor.investments.reduce((iSum, inv) => iSum + inv.investmentAmount, 0), 0
     );
 
@@ -413,28 +477,47 @@ export class StatisticsService {
       sum + investor.investorPayments.reduce((pSum, payment) => pSum + payment.amount, 0), 0
     );
 
-    const activeInvestors = investors.filter(inv => 
+    const activeInvestors = investors.filter(inv =>
       inv.investments.some(i => i.purchaseOrder.status !== 'CANCELLED')
     ).length;
 
-    // Mock ROI calculation
-    const averageROI = 15.5; // This should be calculated based on actual returns
+    // Calculate real ROI for each investor
+    const investorPerformance = investors
+      .filter(inv => inv.investments.length > 0)
+      .map((investor) => {
+        const investment = investor.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
 
-    const topPerformers: InvestorPerformanceDto[] = investors.slice(0, 3).map((investor, index) => {
-      const investment = investor.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
-      const returns = investment * (1 + (Math.random() * 0.3)); // Mock returns
-      const roi = ((returns - investment) / investment) * 100;
+        // Calculate revenue from sales of invested POs
+        let totalRevenue = 0;
+        investor.investments.forEach(inv => {
+          const profitPercent = inv.profitPercentage / 100;
+          inv.purchaseOrder.inventory.forEach(item => {
+            const billRevenue = item.billItems.reduce((s, bi) => s + bi.totalPrice, 0);
+            const retailRevenue = item.retailItems.reduce((s, ri) => s + ri.totalPrice, 0);
+            totalRevenue += (billRevenue + retailRevenue) * profitPercent;
+          });
+        });
 
-      const colors = ['#4f46e5', '#10b981', '#f59e0b'];
-      
-      return {
-        investorName: investor.name,
-        investment,
-        returns,
-        roi,
-        color: colors[index],
-      };
-    });
+        const roi = investment > 0 ? ((totalRevenue - investment) / investment) * 100 : 0;
+
+        return {
+          investorName: investor.name,
+          investment,
+          returns: totalRevenue,
+          roi: Number(roi.toFixed(2)),
+        };
+      })
+      .sort((a, b) => b.returns - a.returns);
+
+    const averageROI = investorPerformance.length > 0
+      ? Number((investorPerformance.reduce((sum, p) => sum + p.roi, 0) / investorPerformance.length).toFixed(2))
+      : 0;
+
+    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    const topPerformers: InvestorPerformanceDto[] = investorPerformance.slice(0, 5).map((p, index) => ({
+      ...p,
+      color: colors[index % colors.length],
+    }));
 
     return {
       totalInvestment,
@@ -461,7 +544,7 @@ export class StatisticsService {
     const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
     // Group by category
-    const categoryMap = new Map();
+    const categoryMap = new Map<string, { amount: number; count: number }>();
     expenses.forEach(expense => {
       const current = categoryMap.get(expense.category) || { amount: 0, count: 0 };
       categoryMap.set(expense.category, {
@@ -470,15 +553,17 @@ export class StatisticsService {
       });
     });
 
-    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#a855f7', '#f43f5e', '#84cc16', '#6366f1', '#22d3ee', '#fb923c'];
     let colorIndex = 0;
 
-    const byCategory: ExpenseCategoryDto[] = Array.from(categoryMap.entries()).map(([category, data]) => ({
-      category,
-      amount: data.amount,
-      percentage: totalExpenses > 0 ? (data.amount / totalExpenses) * 100 : 0,
-      color: colors[colorIndex++ % colors.length],
-    }));
+    const byCategory: ExpenseCategoryDto[] = Array.from(categoryMap.entries())
+      .sort((a, b) => b[1].amount - a[1].amount)
+      .map(([category, data]) => ({
+        category,
+        amount: data.amount,
+        percentage: totalExpenses > 0 ? (data.amount / totalExpenses) * 100 : 0,
+        color: colors[colorIndex++ % colors.length],
+      }));
 
     const monthlyTrend = await this.getMonthlyExpenseTrend(range);
 
@@ -501,25 +586,18 @@ export class StatisticsService {
 
       const expenses = await this.prisma.expense.findMany({
         where: {
-          expenseDate: {
-            gte: startOfMonth,
-            lte: endOfMonth,
-          },
+          expenseDate: { gte: startOfMonth, lte: endOfMonth },
         },
       });
 
       const amount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-      // Calculate growth (simplified)
       const previousMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
       const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0);
-      
+
       const previousExpenses = await this.prisma.expense.findMany({
         where: {
-          expenseDate: {
-            gte: previousMonth,
-            lte: previousEnd,
-          },
+          expenseDate: { gte: previousMonth, lte: previousEnd },
         },
       });
 
@@ -539,14 +617,17 @@ export class StatisticsService {
   // ==================== EMPLOYEE STATS ====================
 
   private async getEmployeeStats(): Promise<EmployeeStatsDto> {
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
     const employees = await this.prisma.employee.findMany({
       where: { isActive: true },
       include: {
         salaries: {
           where: {
             status: 'PAID',
-            month: new Date().getMonth() + 1,
-            year: new Date().getFullYear(),
+            month: currentMonth,
+            year: currentYear,
           },
         },
       },
@@ -554,7 +635,7 @@ export class StatisticsService {
 
     const totalEmployees = employees.length;
     const activeEmployees = employees.filter(emp => emp.isActive).length;
-    
+
     const monthlySalary = employees.reduce((sum, emp) => {
       const currentSalary = emp.salaries[0]?.netSalary || emp.baseSalary;
       return sum + currentSalary;
@@ -562,20 +643,54 @@ export class StatisticsService {
 
     const averageSalary = totalEmployees > 0 ? monthlySalary / totalEmployees : 0;
 
-    // Mock department data
-    const byDepartment: DepartmentStatsDto[] = [
-      { department: 'Sales', count: Math.floor(totalEmployees * 0.4), avgSalary: averageSalary * 1.2, color: '#4f46e5' },
-      { department: 'Operations', count: Math.floor(totalEmployees * 0.3), avgSalary: averageSalary, color: '#10b981' },
-      { department: 'Admin', count: Math.floor(totalEmployees * 0.2), avgSalary: averageSalary * 0.8, color: '#f59e0b' },
-      { department: 'Management', count: Math.floor(totalEmployees * 0.1), avgSalary: averageSalary * 1.5, color: '#ef4444' },
-    ];
+    // Advance outstanding from real data
+    const advanceAgg = await this.prisma.employee.aggregate({
+      where: { isActive: true },
+      _sum: { advanceBalance: true },
+    });
+    const totalAdvanceOutstanding = advanceAgg._sum.advanceBalance || 0;
+
+    // Total salary paid this year
+    const paidSalariesYTD = await this.prisma.salary.aggregate({
+      where: {
+        status: 'PAID',
+        year: currentYear,
+      },
+      _sum: { netSalary: true },
+    });
+    const totalSalaryPaidThisYear = paidSalariesYTD._sum.netSalary || 0;
+
+    // Real designation grouping (replaces hardcoded departments)
+    const designationMap = new Map<string, { count: number; totalSalary: number }>();
+    employees.forEach(emp => {
+      const designation = emp.designation || 'Unspecified';
+      const current = designationMap.get(designation) || { count: 0, totalSalary: 0 };
+      designationMap.set(designation, {
+        count: current.count + 1,
+        totalSalary: current.totalSalary + emp.baseSalary,
+      });
+    });
+
+    const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'];
+    let colorIndex = 0;
+
+    const byDesignation: DesignationStatsDto[] = Array.from(designationMap.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([designation, data]) => ({
+        designation,
+        count: data.count,
+        avgSalary: data.count > 0 ? data.totalSalary / data.count : 0,
+        color: colors[colorIndex++ % colors.length],
+      }));
 
     return {
       totalEmployees,
       activeEmployees,
       monthlySalary,
       averageSalary,
-      byDepartment,
+      totalAdvanceOutstanding,
+      totalSalaryPaidThisYear,
+      byDesignation,
     };
   }
 
@@ -586,14 +701,32 @@ export class StatisticsService {
     const inventorySummary = await this.getInventoryOverview();
     const expenses = await this.getTotalExpenses(range);
 
-    // Calculate health metrics
+    // Calculate health metrics from real data
     const profitabilityIndex = expenses > 0 ? salesSummary.netProfit / expenses : 0;
     const operatingMargin = salesSummary.netMargin;
     const inventoryTurnover = inventorySummary.totalValue > 0 ? salesSummary.cogs / inventorySummary.totalValue : 0;
-    
-    // Mock ratios (these would require balance sheet data)
-    const currentRatio = 1.8;
-    const quickRatio = 1.2;
+
+    // Calculate current ratio from real data: current assets / current liabilities
+    const totalReceivable = (await this.prisma.bill.aggregate({
+      _sum: { dueAmount: true },
+    }))._sum.dueAmount || 0;
+
+    const totalPayable = (await this.prisma.purchaseOrder.aggregate({
+      _sum: { dueAmount: true },
+    }))._sum.dueAmount || 0;
+
+    // Pending salaries as payables
+    const pendingSalaries = await this.prisma.salary.aggregate({
+      where: { status: 'PENDING' },
+      _sum: { grossSalary: true },
+    });
+    const salaryPayable = pendingSalaries._sum.grossSalary || 0;
+
+    const totalCurrentLiabilities = totalPayable + salaryPayable;
+    const totalCurrentAssets = totalReceivable + inventorySummary.totalValue;
+
+    const currentRatio = totalCurrentLiabilities > 0 ? Number((totalCurrentAssets / totalCurrentLiabilities).toFixed(2)) : 0;
+    const quickRatio = totalCurrentLiabilities > 0 ? Number((totalReceivable / totalCurrentLiabilities).toFixed(2)) : 0;
     const cashFlow = salesSummary.totalSales - expenses;
 
     // Calculate health score (0-100)
@@ -601,8 +734,8 @@ export class StatisticsService {
     healthScore += Math.min(profitabilityIndex * 20, 20);
     healthScore += Math.min(operatingMargin / 5, 20);
     healthScore += Math.min(inventoryTurnover * 10, 20);
-    healthScore += Math.min((currentRatio - 1) * 20, 20);
-    healthScore += Math.min((quickRatio - 1) * 20, 20);
+    healthScore += Math.min((currentRatio > 0 ? currentRatio - 1 : 0) * 20, 20);
+    healthScore += Math.min((quickRatio > 0 ? quickRatio : 0) * 20, 20);
     healthScore = Math.max(0, Math.min(100, healthScore));
 
     let status: 'excellent' | 'good' | 'fair' | 'poor';
@@ -628,22 +761,29 @@ export class StatisticsService {
   private async getRecentActivities(): Promise<ActivityLogDto[]> {
     const activities: ActivityLogDto[] = [];
 
-    // Get recent bills
+    // Get recent bills (corporate sales)
     const recentBills = await this.prisma.bill.findMany({
       take: 3,
       orderBy: { billDate: 'desc' },
-      include: { user: true },
+      include: {
+        user: true,
+        buyerPO: {
+          include: {
+            quotation: { select: { companyName: true } },
+          },
+        },
+      },
     });
 
     recentBills.forEach(bill => {
       activities.push({
         id: bill.id,
         type: 'sale',
-        description: `New corporate sale to ${bill.buyerPOId}`,
+        description: `Corporate sale to ${bill.buyerPO?.quotation?.companyName || 'customer'} - Bill #${bill.billNumber}`,
         amount: bill.totalAmount,
         timestamp: bill.billDate,
         user: bill.user?.name || 'System',
-        icon: '💰',
+        icon: '\uD83D\uDCB0',
         color: '#10b981',
       });
     });
@@ -658,18 +798,19 @@ export class StatisticsService {
       activities.push({
         id: sale.id,
         type: 'sale',
-        description: 'New retail sale completed',
+        description: `Retail sale #${sale.saleNumber} - ${sale.customerName || 'Walk-in customer'}`,
         amount: sale.totalAmount,
         timestamp: sale.saleDate,
         user: 'POS System',
-        icon: '🛒',
+        icon: '\uD83D\uDED2',
         color: '#10b981',
       });
     });
 
-    // Get recent expenses
+    // Get recent expenses (manual ones)
     const recentExpenses = await this.prisma.expense.findMany({
       take: 2,
+      where: { isAutoGenerated: false },
       orderBy: { expenseDate: 'desc' },
       include: { user: true },
     });
@@ -678,12 +819,79 @@ export class StatisticsService {
       activities.push({
         id: expense.id,
         type: 'expense',
-        description: `Expense recorded: ${expense.title}`,
+        description: `Expense: ${expense.title}`,
         amount: expense.amount,
         timestamp: expense.expenseDate,
         user: expense.user?.name || 'System',
-        icon: '💸',
+        icon: '\uD83D\uDCB8',
         color: '#ef4444',
+      });
+    });
+
+    // Get recent salary payments
+    const recentSalaryPayments = await this.prisma.salary.findMany({
+      take: 2,
+      where: { status: 'PAID' },
+      orderBy: { paidDate: 'desc' },
+      include: {
+        employee: { select: { name: true, employeeId: true } },
+      },
+    });
+
+    recentSalaryPayments.forEach(salary => {
+      activities.push({
+        id: salary.id,
+        type: 'expense',
+        description: `Salary paid to ${salary.employee.name} - ${this.getMonthName(salary.month)} ${salary.year}`,
+        amount: salary.netSalary,
+        timestamp: salary.paidDate || new Date(),
+        user: 'Payroll',
+        icon: '\uD83D\uDCB5',
+        color: '#f97316',
+      });
+    });
+
+    // Get recent investor payments
+    const recentInvestorPayments = await this.prisma.investorPayment.findMany({
+      take: 2,
+      orderBy: { paymentDate: 'desc' },
+      include: {
+        investor: { select: { name: true } },
+      },
+    });
+
+    recentInvestorPayments.forEach(payment => {
+      activities.push({
+        id: payment.id,
+        type: 'payment',
+        description: `Investor payment to ${payment.investor.name}`,
+        amount: payment.amount,
+        timestamp: payment.paymentDate,
+        user: payment.investor.name,
+        icon: '\uD83D\uDCCA',
+        color: '#8b5cf6',
+      });
+    });
+
+    // Get recent PO payments
+    const recentPOPayments = await this.prisma.purchaseOrderPayment.findMany({
+      take: 2,
+      orderBy: { paymentDate: 'desc' },
+      include: {
+        purchaseOrder: { select: { poNumber: true, vendorName: true } },
+      },
+    });
+
+    recentPOPayments.forEach(payment => {
+      activities.push({
+        id: payment.id,
+        type: 'purchase',
+        description: `PO payment for ${payment.purchaseOrder.poNumber} - ${payment.purchaseOrder.vendorName}`,
+        amount: payment.amount,
+        timestamp: payment.paymentDate,
+        user: 'Procurement',
+        icon: '\uD83D\uDCE6',
+        color: '#f59e0b',
       });
     });
 
@@ -698,24 +906,24 @@ export class StatisticsService {
       activities.push({
         id: inv.id,
         type: 'investment',
-        description: `New investment from ${inv.investor.name}`,
+        description: `Investment from ${inv.investor.name} in PO ${inv.purchaseOrder.poNumber}`,
         amount: inv.investmentAmount,
         timestamp: inv.purchaseOrder.createdAt,
         user: inv.investor.name,
-        icon: '📈',
-        color: '#f59e0b',
+        icon: '\uD83D\uDCC8',
+        color: '#4f46e5',
       });
     });
 
-    return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 8);
+    return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 10);
   }
 
   // ==================== QUICK STATS ====================
 
   async getQuickStats(range?: DateRangeDto): Promise<QuickStatsDto> {
     const today = new Date();
-    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-    const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
@@ -748,16 +956,7 @@ export class StatisticsService {
 
     const lowStockItems = await this.prisma.inventory.count({
       where: {
-        OR: [
-          {
-            minStockLevel: { not: null },
-            quantity: { lt: this.prisma.inventory.fields.minStockLevel },
-          },
-          {
-            minStockLevel: null,
-            quantity: { lte: 10 },
-          },
-        ],
+        quantity: { lte: 10 },
       },
     });
 
@@ -796,8 +995,11 @@ export class StatisticsService {
       };
     }
 
-    const expenses = await this.prisma.expense.findMany({ where });
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const result = await this.prisma.expense.aggregate({
+      where,
+      _sum: { amount: true },
+    });
+    return result._sum.amount || 0;
   }
 
   private getPreviousPeriod(range?: DateRangeDto): DateRangeDto {
@@ -818,6 +1020,12 @@ export class StatisticsService {
       startDate: new Date(start.getTime() - duration).toISOString().split('T')[0],
       endDate: new Date(end.getTime() - duration).toISOString().split('T')[0],
     };
+  }
+
+  private getMonthName(month: number): string {
+    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month] || '';
   }
 
   // ==================== CHART DATA METHODS ====================
@@ -869,7 +1077,7 @@ export class StatisticsService {
       labels: overview.byCategory.map(cat => cat.category),
       datasets: [
         {
-          label: 'Inventory Value',
+          label: 'Inventory Value by Vendor',
           data: overview.byCategory.map(cat => cat.value),
           backgroundColor: overview.byCategory.map(cat => cat.color),
           borderWidth: 1,

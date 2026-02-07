@@ -4,6 +4,7 @@ import { PaymentMethod } from '@prisma/client';
 export declare class InvestorService {
     private prisma;
     constructor(prisma: DatabaseService);
+    private getSystemUserId;
     createInvestor(createInvestorDto: CreateInvestorDto): Promise<{
         name: string;
         id: string;
