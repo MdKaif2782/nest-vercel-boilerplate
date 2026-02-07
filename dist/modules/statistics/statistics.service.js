@@ -84,17 +84,17 @@ let StatisticsService = class StatisticsService {
             const date = new Date();
             date.setMonth(date.getMonth() - i);
             const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-            const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+            const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
             const monthRange = {
-                startDate: startOfMonth.toISOString().split('T')[0],
-                endDate: endOfMonth.toISOString().split('T')[0],
+                startDate: startOfMonth.toISOString(),
+                endDate: endOfMonth.toISOString(),
             };
             const sales = await this.getSalesSummary(monthRange);
             const previousMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
-            const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0);
+            const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0, 23, 59, 59, 999);
             const previousRange = {
-                startDate: previousMonth.toISOString().split('T')[0],
-                endDate: previousEnd.toISOString().split('T')[0],
+                startDate: previousMonth.toISOString(),
+                endDate: previousEnd.toISOString(),
             };
             const previousSales = await this.getSalesSummary(previousRange);
             const growth = previousSales.totalSales > 0
@@ -224,12 +224,12 @@ let StatisticsService = class StatisticsService {
         const currentMonth = new Date();
         const previousMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
         const currentRange = {
-            startDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0],
-            endDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0],
+            startDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString(),
+            endDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
         };
         const previousRange = {
-            startDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1).toISOString().split('T')[0],
-            endDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0).toISOString().split('T')[0],
+            startDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1).toISOString(),
+            endDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
         };
         const currentSales = await this.getSalesSummary(currentRange);
         const previousSales = await this.getSalesSummary(previousRange);
@@ -740,16 +740,16 @@ let StatisticsService = class StatisticsService {
         startOfWeek.setHours(0, 0, 0, 0);
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const todaySales = await this.getSalesSummary({
-            startDate: startOfToday.toISOString().split('T')[0],
-            endDate: endOfToday.toISOString().split('T')[0],
+            startDate: startOfToday.toISOString(),
+            endDate: endOfToday.toISOString(),
         });
         const weekSales = await this.getSalesSummary({
-            startDate: startOfWeek.toISOString().split('T')[0],
-            endDate: endOfToday.toISOString().split('T')[0],
+            startDate: startOfWeek.toISOString(),
+            endDate: endOfToday.toISOString(),
         });
         const monthSales = await this.getSalesSummary({
-            startDate: startOfMonth.toISOString().split('T')[0],
-            endDate: endOfToday.toISOString().split('T')[0],
+            startDate: startOfMonth.toISOString(),
+            endDate: endOfToday.toISOString(),
         });
         const pendingOrders = await this.prisma.purchaseOrder.count({
             where: { status: 'PENDING' },
@@ -802,16 +802,16 @@ let StatisticsService = class StatisticsService {
             const end = new Date();
             const start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
             return {
-                startDate: start.toISOString().split('T')[0],
-                endDate: end.toISOString().split('T')[0],
+                startDate: start.toISOString(),
+                endDate: end.toISOString(),
             };
         }
         const start = new Date(range.startDate);
         const end = new Date(range.endDate);
         const duration = end.getTime() - start.getTime();
         return {
-            startDate: new Date(start.getTime() - duration).toISOString().split('T')[0],
-            endDate: new Date(end.getTime() - duration).toISOString().split('T')[0],
+            startDate: new Date(start.getTime() - duration).toISOString(),
+            endDate: new Date(end.getTime() - duration).toISOString(),
         };
     }
     getMonthName(month) {

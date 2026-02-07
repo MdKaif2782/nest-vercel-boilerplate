@@ -124,20 +124,20 @@ export class StatisticsService {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
 
       const monthRange: DateRangeDto = {
-        startDate: startOfMonth.toISOString().split('T')[0],
-        endDate: endOfMonth.toISOString().split('T')[0],
+        startDate: startOfMonth.toISOString(),
+        endDate: endOfMonth.toISOString(),
       };
 
       const sales = await this.getSalesSummary(monthRange);
       const previousMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
-      const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0);
+      const previousEnd = new Date(date.getFullYear(), date.getMonth(), 0, 23, 59, 59, 999);
 
       const previousRange: DateRangeDto = {
-        startDate: previousMonth.toISOString().split('T')[0],
-        endDate: previousEnd.toISOString().split('T')[0],
+        startDate: previousMonth.toISOString(),
+        endDate: previousEnd.toISOString(),
       };
 
       const previousSales = await this.getSalesSummary(previousRange);
@@ -289,13 +289,13 @@ export class StatisticsService {
     const previousMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
 
     const currentRange: DateRangeDto = {
-      startDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString().split('T')[0],
-      endDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).toISOString().split('T')[0],
+      startDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString(),
+      endDate: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
     };
 
     const previousRange: DateRangeDto = {
-      startDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1).toISOString().split('T')[0],
-      endDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0).toISOString().split('T')[0],
+      startDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1).toISOString(),
+      endDate: new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
     };
 
     const currentSales = await this.getSalesSummary(currentRange);
@@ -932,18 +932,18 @@ export class StatisticsService {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     const todaySales = await this.getSalesSummary({
-      startDate: startOfToday.toISOString().split('T')[0],
-      endDate: endOfToday.toISOString().split('T')[0],
+      startDate: startOfToday.toISOString(),
+      endDate: endOfToday.toISOString(),
     });
 
     const weekSales = await this.getSalesSummary({
-      startDate: startOfWeek.toISOString().split('T')[0],
-      endDate: endOfToday.toISOString().split('T')[0],
+      startDate: startOfWeek.toISOString(),
+      endDate: endOfToday.toISOString(),
     });
 
     const monthSales = await this.getSalesSummary({
-      startDate: startOfMonth.toISOString().split('T')[0],
-      endDate: endOfToday.toISOString().split('T')[0],
+      startDate: startOfMonth.toISOString(),
+      endDate: endOfToday.toISOString(),
     });
 
     const pendingOrders = await this.prisma.purchaseOrder.count({
@@ -1007,8 +1007,8 @@ export class StatisticsService {
       const end = new Date();
       const start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
       return {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
       };
     }
 
@@ -1017,8 +1017,8 @@ export class StatisticsService {
     const duration = end.getTime() - start.getTime();
 
     return {
-      startDate: new Date(start.getTime() - duration).toISOString().split('T')[0],
-      endDate: new Date(end.getTime() - duration).toISOString().split('T')[0],
+      startDate: new Date(start.getTime() - duration).toISOString(),
+      endDate: new Date(end.getTime() - duration).toISOString(),
     };
   }
 
