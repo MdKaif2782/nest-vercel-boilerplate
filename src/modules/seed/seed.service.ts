@@ -153,12 +153,12 @@ export class SeedService {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   private async seedAdminUser() {
-    const hashedPassword = await hash('admin123');
+    const hashedPassword = await hash('genuine-admin123');
 
     const admin = await this.prisma.user.create({
       data: {
-        email: 'admin@middleman.com',
-        name: 'Admin User',
+        email: 'genuine-admin@gmail.com',
+        name: 'M.A Latif Reza',
         password: hashedPassword,
         role: 'ADMIN',
       },
