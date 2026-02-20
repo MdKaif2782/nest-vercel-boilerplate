@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
+import { Request } from 'express';
 import { EmployeeService } from './employee.service';
-import { CreateEmployeeDto, UpdateEmployeeDto, CreateSalaryDto, PaySalaryDto, GiveAdvanceDto, AdjustAdvanceDto } from './dto';
+import { CreateEmployeeDto, UpdateEmployeeDto, CreateSalaryDto, PaySalaryDto, GiveAdvanceDto, AdjustAdvanceDto, BulkSalaryUploadDto } from './dto';
 export declare class EmployeeController {
     private readonly employeeService;
     constructor(employeeService: EmployeeService);
@@ -368,6 +369,38 @@ export declare class EmployeeController {
                 skipped: any[];
                 errors: any[];
             };
+        };
+    } | {
+        statusCode: HttpStatus;
+        message: any;
+        data?: undefined;
+    }>;
+    bulkSalaryUpload(dto: BulkSalaryUploadDto, req: Request): Promise<{
+        statusCode: HttpStatus;
+        message: string;
+        data: {
+            summary: {
+                totalRows: number;
+                processed: number;
+                failed: number;
+                salariesCreated: number;
+                expensesCreated: number;
+                employeesCreated: number;
+            };
+            processedRows: number;
+            createdSalaries: string[];
+            createdExpenses: string[];
+            createdEmployees: string[];
+            errors: {
+                row: number;
+                employeeName: string;
+                reason: string;
+            }[];
+            updatedAdvanceBalances: Record<string, number>;
+            success: boolean;
+            month: number;
+            year: number;
+            monthName: string;
         };
     } | {
         statusCode: HttpStatus;

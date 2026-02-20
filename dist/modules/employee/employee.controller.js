@@ -16,6 +16,7 @@ exports.EmployeeController = void 0;
 const common_1 = require("@nestjs/common");
 const employee_service_1 = require("./employee.service");
 const dto_1 = require("./dto");
+const auth_guard_1 = require("../auth/auth.guard");
 let EmployeeController = class EmployeeController {
     constructor(employeeService) {
         this.employeeService = employeeService;
@@ -120,6 +121,20 @@ let EmployeeController = class EmployeeController {
             return {
                 statusCode: common_1.HttpStatus.CREATED,
                 message: 'Monthly salaries generated successfully',
+                data: result,
+            };
+        }
+        catch (error) {
+            return { statusCode: common_1.HttpStatus.BAD_REQUEST, message: error.message };
+        }
+    }
+    async bulkSalaryUpload(dto, req) {
+        try {
+            const user = req;
+            const result = await this.employeeService.bulkSalaryUpload(dto, user.user.id);
+            return {
+                statusCode: common_1.HttpStatus.OK,
+                message: 'Bulk salary upload processed successfully',
                 data: result,
             };
         }
@@ -288,6 +303,15 @@ __decorate([
     __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", Promise)
 ], EmployeeController.prototype, "generateMonthlySalaries", null);
+__decorate([
+    (0, common_1.Post)('salaries/bulk-upload'),
+    (0, common_1.UseGuards)(auth_guard_1.AccessTokenGuard),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.BulkSalaryUploadDto, Object]),
+    __metadata("design:returntype", Promise)
+], EmployeeController.prototype, "bulkSalaryUpload", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

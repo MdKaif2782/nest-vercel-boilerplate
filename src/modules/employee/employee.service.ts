@@ -11,6 +11,8 @@ import {
   PaySalaryDto,
   GiveAdvanceDto,
   AdjustAdvanceDto,
+  BulkSalaryUploadDto,
+  BulkSalaryEntryDto,
 } from './dto';
 import { DatabaseService } from '../database/database.service';
 import { PaymentMethod, ExpenseCategory, ExpenseStatus } from '@prisma/client';
@@ -901,6 +903,332 @@ export class EmployeeService {
     });
 
     return { year: currentYear, trends };
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  BULK SALARY UPLOAD (from Excel JSON)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * Map the modeOfPayment string from the Excel sheet to a PaymentMethod enum.
+   * "0" → CASH, "1" → BANK_TRANSFER, "2" → CHEQUE, "3" → CARD
+   */
+  private mapPaymentMode(mode?: string): PaymentMethod {
+    switch (mode) {
+      case '1':
+        return PaymentMethod.BANK_TRANSFER;
+      case '2':
+        return PaymentMethod.CHEQUE;
+      case '3':
+        return PaymentMethod.CARD;
+      case '0':
+      default:
+        return PaymentMethod.CASH;
+    }
+  }
+
+  /**
+   * Process a bulk salary upload from a JSON payload structured like an Excel salary sheet.
+   *
+   * For each row:
+   * 1. Validate / find-or-create employee
+   * 2. Calculate salary components
+   * 3. Handle advance (new advance given, recovery/deduction)
+   * 4. Create salary record
+   * 5. Create expense record if salary is paid
+   * 6. Update employee advance balance
+   */
+  async bulkSalaryUpload(dto: BulkSalaryUploadDto, userId: string) {
+    const { month, year, entries } = dto;
+    const monthName = this.getMonthName(month);
+
+    const results = {
+      processedRows: 0,
+      createdSalaries: [] as string[],
+      createdExpenses: [] as string[],
+      createdEmployees: [] as string[],
+      errors: [] as { row: number; employeeName: string; reason: string }[],
+      updatedAdvanceBalances: {} as Record<string, number>,
+    };
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const rowIndex = i + 1;
+
+      try {
+        await this.processOneBulkEntry(entry, month, year, monthName, userId, rowIndex, results);
+        results.processedRows++;
+      } catch (error) {
+        results.errors.push({
+          row: rowIndex,
+          employeeName: entry.employeeName || `Row ${rowIndex}`,
+          reason: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    return {
+      success: true,
+      month,
+      year,
+      monthName,
+      ...results,
+      summary: {
+        totalRows: entries.length,
+        processed: results.processedRows,
+        failed: results.errors.length,
+        salariesCreated: results.createdSalaries.length,
+        expensesCreated: results.createdExpenses.length,
+        employeesCreated: results.createdEmployees.length,
+      },
+    };
+  }
+
+  /**
+   * Process a single row from the bulk salary upload.
+   */
+  private async processOneBulkEntry(
+    entry: BulkSalaryEntryDto,
+    month: number,
+    year: number,
+    monthName: string,
+    userId: string,
+    rowIndex: number,
+    results: {
+      createdSalaries: string[];
+      createdExpenses: string[];
+      createdEmployees: string[];
+      errors: { row: number; employeeName: string; reason: string }[];
+      updatedAdvanceBalances: Record<string, number>;
+    },
+  ) {
+    // ── Step 1: Find or create employee ──
+    let employee = await this.findEmployeeByIdOrName(
+      entry.employeeId,
+      entry.employeeName,
+    );
+
+    if (!employee) {
+      // Auto-create employee
+      const newEmpId = await this.generateEmployeeId();
+      employee = await this.prisma.employee.create({
+        data: {
+          employeeId: newEmpId,
+          name: entry.employeeName,
+          email: `${entry.employeeName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@auto.generated`,
+          designation: entry.designation || 'Staff',
+          joinDate: entry.joiningDate ? new Date(entry.joiningDate) : new Date(),
+          baseSalary: entry.basic,
+          homeRentAllowance: 0,
+          healthAllowance: 0,
+          travelAllowance: 0,
+          mobileAllowance: entry.medicalMobile || 0,
+          otherAllowances: 0,
+        },
+      });
+      results.createdEmployees.push(employee.employeeId);
+    }
+
+    // ── Step 2: Check for existing salary ──
+    const existingSalary = await this.prisma.salary.findUnique({
+      where: {
+        employeeId_month_year: {
+          employeeId: employee.id,
+          month,
+          year,
+        },
+      },
+    });
+
+    if (existingSalary && existingSalary.status === 'PAID') {
+      throw new ConflictException(
+        `Salary already paid for ${entry.employeeName} for ${monthName} ${year} (ID: ${existingSalary.id})`,
+      );
+    }
+
+    // ── Step 3: Calculate salary components ──
+    const baseSalary = entry.basic;
+    const medicalMobile = entry.medicalMobile || 0;
+    const bonusBoksis = entry.bonusBoksis || 0;
+    const monthlySalary = entry.monthlySalary;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const perDay = baseSalary / daysInMonth;
+
+    // If dailyPresent > 0, compute pro-rata; otherwise use full month
+    let calculatedPayable: number;
+    if (entry.dailyPresent && entry.dailyPresent > 0) {
+      calculatedPayable = perDay * entry.dailyPresent + medicalMobile + bonusBoksis;
+    } else {
+      calculatedPayable = monthlySalary + medicalMobile + bonusBoksis;
+    }
+
+    // Use the sheet's totalPayable if provided; otherwise server-calculated
+    const totalPayable = entry.totalPayable ?? calculatedPayable;
+    const grossSalary = totalPayable;
+
+    // ── Step 4: Advance handling ──
+    // The "advance" field from Excel is the advance DEDUCTION (recovery from salary),
+    // just like the regular paySalary flow.
+    let currentAdvanceBalance = employee.advanceBalance;
+    let advanceDeduction = 0;
+
+    if (entry.advance && entry.advance > 0) {
+      // Treat as advance deduction — cap at current balance and gross salary
+      advanceDeduction = Math.min(entry.advance, currentAdvanceBalance, grossSalary);
+    }
+
+    // Net salary after advance deduction
+    const netSalary = grossSalary - advanceDeduction;
+
+    // New advance balance after recovery
+    const newAdvanceBalance = currentAdvanceBalance - advanceDeduction;
+
+    // Determine payment status
+    const paymentMethod = this.mapPaymentMode(entry.modeOfPayment);
+    const isPaid = true; // Sheet data represents processed/paid salaries
+    const paidDate = new Date();
+
+    // ── Step 5: Execute everything in a transaction ──
+    const txResult = await this.prisma.$transaction(async (tx) => {
+      let salaryId: string;
+
+      if (existingSalary) {
+        // PENDING salary exists → update it to PAID (like paySalary)
+        const updated = await tx.salary.update({
+          where: { id: existingSalary.id },
+          data: {
+            baseSalary,
+            allowances: medicalMobile,
+            bonus: bonusBoksis > 0 ? bonusBoksis : null,
+            deductions: advanceDeduction > 0 ? advanceDeduction : 0,
+            advanceDeduction,
+            grossSalary,
+            netSalary,
+            status: 'PAID',
+            paidDate,
+            paymentMethod,
+            reference: `BULK-${month}-${year}-R${rowIndex}`,
+            notes: `Bulk upload row ${rowIndex}`,
+          },
+        });
+        salaryId = updated.id;
+      } else {
+        // No salary exists → create new one as PAID
+        const created = await tx.salary.create({
+          data: {
+            employeeId: employee.id,
+            month,
+            year,
+            baseSalary,
+            allowances: medicalMobile,
+            overtimeHours: null,
+            overtimeAmount: null,
+            bonus: bonusBoksis > 0 ? bonusBoksis : null,
+            deductions: advanceDeduction > 0 ? advanceDeduction : 0,
+            advanceDeduction,
+            grossSalary,
+            netSalary,
+            status: 'PAID',
+            paidDate,
+            paymentMethod,
+            reference: `BULK-${month}-${year}-R${rowIndex}`,
+            notes: `Bulk upload row ${rowIndex}`,
+          },
+        });
+        salaryId = created.id;
+      }
+
+      // 5b. Advance recovery record (if deduction > 0)
+      if (advanceDeduction > 0) {
+        await tx.employeeAdvance.create({
+          data: {
+            employeeId: employee.id,
+            amount: advanceDeduction,
+            type: 'RECOVERED',
+            description: `Recovered from ${monthName} ${year} salary (bulk upload)`,
+            balanceAfter: newAdvanceBalance,
+            salaryId,
+          },
+        });
+      }
+
+      // 5c. Update employee advance balance
+      await tx.employee.update({
+        where: { id: employee.id },
+        data: { advanceBalance: Math.max(newAdvanceBalance, 0) },
+      });
+
+      // 5d. Create expense record if paid
+      let expenseId: string | null = null;
+      if (isPaid) {
+        const expense = await tx.expense.create({
+          data: {
+            title: `Salary for ${employee.name} - ${monthName} ${year}`,
+            description: `Net salary payment to ${employee.name} (${employee.employeeId}). Gross: ${grossSalary}, Advance Deducted: ${advanceDeduction}`,
+            amount: netSalary,
+            category: 'SALARY',
+            expenseDate: paidDate,
+            paymentMethod,
+            status: 'APPROVED',
+            isAutoGenerated: true,
+            salaryId,
+            recordedBy: userId,
+          },
+        });
+        expenseId = expense.id;
+      }
+
+      return { salaryId, expenseId };
+    });
+
+    // ── Step 6: Collect results ──
+    results.createdSalaries.push(txResult.salaryId);
+    if (txResult.expenseId) {
+      results.createdExpenses.push(txResult.expenseId);
+    }
+    results.updatedAdvanceBalances[employee.employeeId] = Math.max(newAdvanceBalance, 0);
+  }
+
+  /**
+   * Find an employee by their system employeeId (e.g. "EMP-00001") OR by name.
+   * For numeric IDs from Excel, we try to map them to "EMP-XXXXX" format.
+   */
+  private async findEmployeeByIdOrName(
+    employeeId?: string,
+    employeeName?: string,
+  ) {
+    // Try by employeeId first
+    if (employeeId) {
+      // If it's a number, convert to EMP-XXXXX format
+      const normalizedId = /^\d+$/.test(employeeId)
+        ? `EMP-${employeeId.padStart(5, '0')}`
+        : employeeId;
+
+      const emp = await this.prisma.employee.findFirst({
+        where: {
+          OR: [
+            { employeeId: normalizedId },
+            { employeeId: employeeId },
+          ],
+        },
+      });
+      if (emp) return emp;
+    }
+
+    // Fall back to name search (case-insensitive)
+    if (employeeName) {
+      const emp = await this.prisma.employee.findFirst({
+        where: {
+          name: {
+            equals: employeeName,
+            mode: 'insensitive',
+          },
+        },
+      });
+      if (emp) return emp;
+    }
+
+    return null;
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

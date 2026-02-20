@@ -9,7 +9,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SalaryPaymentDto = exports.AdjustAdvanceDto = exports.GiveAdvanceDto = exports.PaySalaryDto = exports.CreateSalaryDto = exports.UpdateEmployeeDto = exports.CreateEmployeeDto = void 0;
+exports.BulkSalaryUploadDto = exports.BulkSalaryEntryDto = exports.SalaryPaymentDto = exports.AdjustAdvanceDto = exports.GiveAdvanceDto = exports.PaySalaryDto = exports.CreateSalaryDto = exports.UpdateEmployeeDto = exports.CreateEmployeeDto = void 0;
+const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const client_1 = require("@prisma/client");
 class CreateEmployeeDto {
@@ -262,4 +263,95 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], SalaryPaymentDto.prototype, "notes", void 0);
+class BulkSalaryEntryDto {
+}
+exports.BulkSalaryEntryDto = BulkSalaryEntryDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], BulkSalaryEntryDto.prototype, "employeeId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], BulkSalaryEntryDto.prototype, "employeeName", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "basic", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], BulkSalaryEntryDto.prototype, "joiningDate", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], BulkSalaryEntryDto.prototype, "designation", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "monthlySalary", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "medicalMobile", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "bonusBoksis", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "perDay", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "dailyPresent", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "totalPayable", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "advance", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], BulkSalaryEntryDto.prototype, "modeOfPayment", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryEntryDto.prototype, "balance", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], BulkSalaryEntryDto.prototype, "signature", void 0);
+class BulkSalaryUploadDto {
+}
+exports.BulkSalaryUploadDto = BulkSalaryUploadDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryUploadDto.prototype, "month", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], BulkSalaryUploadDto.prototype, "year", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => BulkSalaryEntryDto),
+    __metadata("design:type", Array)
+], BulkSalaryUploadDto.prototype, "entries", void 0);
 //# sourceMappingURL=index.js.map

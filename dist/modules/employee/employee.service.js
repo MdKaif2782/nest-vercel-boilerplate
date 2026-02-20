@@ -686,6 +686,237 @@ let EmployeeService = class EmployeeService {
         });
         return { year: currentYear, trends };
     }
+    mapPaymentMode(mode) {
+        switch (mode) {
+            case '1':
+                return client_1.PaymentMethod.BANK_TRANSFER;
+            case '2':
+                return client_1.PaymentMethod.CHEQUE;
+            case '3':
+                return client_1.PaymentMethod.CARD;
+            case '0':
+            default:
+                return client_1.PaymentMethod.CASH;
+        }
+    }
+    async bulkSalaryUpload(dto, userId) {
+        const { month, year, entries } = dto;
+        const monthName = this.getMonthName(month);
+        const results = {
+            processedRows: 0,
+            createdSalaries: [],
+            createdExpenses: [],
+            createdEmployees: [],
+            errors: [],
+            updatedAdvanceBalances: {},
+        };
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const rowIndex = i + 1;
+            try {
+                await this.processOneBulkEntry(entry, month, year, monthName, userId, rowIndex, results);
+                results.processedRows++;
+            }
+            catch (error) {
+                results.errors.push({
+                    row: rowIndex,
+                    employeeName: entry.employeeName || `Row ${rowIndex}`,
+                    reason: error.message || 'Unknown error',
+                });
+            }
+        }
+        return {
+            success: true,
+            month,
+            year,
+            monthName,
+            ...results,
+            summary: {
+                totalRows: entries.length,
+                processed: results.processedRows,
+                failed: results.errors.length,
+                salariesCreated: results.createdSalaries.length,
+                expensesCreated: results.createdExpenses.length,
+                employeesCreated: results.createdEmployees.length,
+            },
+        };
+    }
+    async processOneBulkEntry(entry, month, year, monthName, userId, rowIndex, results) {
+        let employee = await this.findEmployeeByIdOrName(entry.employeeId, entry.employeeName);
+        if (!employee) {
+            const newEmpId = await this.generateEmployeeId();
+            employee = await this.prisma.employee.create({
+                data: {
+                    employeeId: newEmpId,
+                    name: entry.employeeName,
+                    email: `${entry.employeeName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@auto.generated`,
+                    designation: entry.designation || 'Staff',
+                    joinDate: entry.joiningDate ? new Date(entry.joiningDate) : new Date(),
+                    baseSalary: entry.basic,
+                    homeRentAllowance: 0,
+                    healthAllowance: 0,
+                    travelAllowance: 0,
+                    mobileAllowance: entry.medicalMobile || 0,
+                    otherAllowances: 0,
+                },
+            });
+            results.createdEmployees.push(employee.employeeId);
+        }
+        const existingSalary = await this.prisma.salary.findUnique({
+            where: {
+                employeeId_month_year: {
+                    employeeId: employee.id,
+                    month,
+                    year,
+                },
+            },
+        });
+        if (existingSalary && existingSalary.status === 'PAID') {
+            throw new common_1.ConflictException(`Salary already paid for ${entry.employeeName} for ${monthName} ${year} (ID: ${existingSalary.id})`);
+        }
+        const baseSalary = entry.basic;
+        const medicalMobile = entry.medicalMobile || 0;
+        const bonusBoksis = entry.bonusBoksis || 0;
+        const monthlySalary = entry.monthlySalary;
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const perDay = baseSalary / daysInMonth;
+        let calculatedPayable;
+        if (entry.dailyPresent && entry.dailyPresent > 0) {
+            calculatedPayable = perDay * entry.dailyPresent + medicalMobile + bonusBoksis;
+        }
+        else {
+            calculatedPayable = monthlySalary + medicalMobile + bonusBoksis;
+        }
+        const totalPayable = entry.totalPayable ?? calculatedPayable;
+        const grossSalary = totalPayable;
+        let currentAdvanceBalance = employee.advanceBalance;
+        let advanceDeduction = 0;
+        if (entry.advance && entry.advance > 0) {
+            advanceDeduction = Math.min(entry.advance, currentAdvanceBalance, grossSalary);
+        }
+        const netSalary = grossSalary - advanceDeduction;
+        const newAdvanceBalance = currentAdvanceBalance - advanceDeduction;
+        const paymentMethod = this.mapPaymentMode(entry.modeOfPayment);
+        const isPaid = true;
+        const paidDate = new Date();
+        const txResult = await this.prisma.$transaction(async (tx) => {
+            let salaryId;
+            if (existingSalary) {
+                const updated = await tx.salary.update({
+                    where: { id: existingSalary.id },
+                    data: {
+                        baseSalary,
+                        allowances: medicalMobile,
+                        bonus: bonusBoksis > 0 ? bonusBoksis : null,
+                        deductions: advanceDeduction > 0 ? advanceDeduction : 0,
+                        advanceDeduction,
+                        grossSalary,
+                        netSalary,
+                        status: 'PAID',
+                        paidDate,
+                        paymentMethod,
+                        reference: `BULK-${month}-${year}-R${rowIndex}`,
+                        notes: `Bulk upload row ${rowIndex}`,
+                    },
+                });
+                salaryId = updated.id;
+            }
+            else {
+                const created = await tx.salary.create({
+                    data: {
+                        employeeId: employee.id,
+                        month,
+                        year,
+                        baseSalary,
+                        allowances: medicalMobile,
+                        overtimeHours: null,
+                        overtimeAmount: null,
+                        bonus: bonusBoksis > 0 ? bonusBoksis : null,
+                        deductions: advanceDeduction > 0 ? advanceDeduction : 0,
+                        advanceDeduction,
+                        grossSalary,
+                        netSalary,
+                        status: 'PAID',
+                        paidDate,
+                        paymentMethod,
+                        reference: `BULK-${month}-${year}-R${rowIndex}`,
+                        notes: `Bulk upload row ${rowIndex}`,
+                    },
+                });
+                salaryId = created.id;
+            }
+            if (advanceDeduction > 0) {
+                await tx.employeeAdvance.create({
+                    data: {
+                        employeeId: employee.id,
+                        amount: advanceDeduction,
+                        type: 'RECOVERED',
+                        description: `Recovered from ${monthName} ${year} salary (bulk upload)`,
+                        balanceAfter: newAdvanceBalance,
+                        salaryId,
+                    },
+                });
+            }
+            await tx.employee.update({
+                where: { id: employee.id },
+                data: { advanceBalance: Math.max(newAdvanceBalance, 0) },
+            });
+            let expenseId = null;
+            if (isPaid) {
+                const expense = await tx.expense.create({
+                    data: {
+                        title: `Salary for ${employee.name} - ${monthName} ${year}`,
+                        description: `Net salary payment to ${employee.name} (${employee.employeeId}). Gross: ${grossSalary}, Advance Deducted: ${advanceDeduction}`,
+                        amount: netSalary,
+                        category: 'SALARY',
+                        expenseDate: paidDate,
+                        paymentMethod,
+                        status: 'APPROVED',
+                        isAutoGenerated: true,
+                        salaryId,
+                        recordedBy: userId,
+                    },
+                });
+                expenseId = expense.id;
+            }
+            return { salaryId, expenseId };
+        });
+        results.createdSalaries.push(txResult.salaryId);
+        if (txResult.expenseId) {
+            results.createdExpenses.push(txResult.expenseId);
+        }
+        results.updatedAdvanceBalances[employee.employeeId] = Math.max(newAdvanceBalance, 0);
+    }
+    async findEmployeeByIdOrName(employeeId, employeeName) {
+        if (employeeId) {
+            const normalizedId = /^\d+$/.test(employeeId)
+                ? `EMP-${employeeId.padStart(5, '0')}`
+                : employeeId;
+            const emp = await this.prisma.employee.findFirst({
+                where: {
+                    OR: [
+                        { employeeId: normalizedId },
+                        { employeeId: employeeId },
+                    ],
+                },
+            });
+            if (emp)
+                return emp;
+        }
+        if (employeeName) {
+            const emp = await this.prisma.employee.findFirst({
+                where: {
+                    name: {
+                        equals: employeeName,
+                        mode: 'insensitive',
+                    },
+                },
+            });
+            if (emp)
+                return emp;
+        }
+        return null;
+    }
     getMonthName(month) {
         const months = [
             '',

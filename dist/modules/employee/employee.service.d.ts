@@ -1,4 +1,4 @@
-import { CreateEmployeeDto, UpdateEmployeeDto, CreateSalaryDto, PaySalaryDto, GiveAdvanceDto, AdjustAdvanceDto } from './dto';
+import { CreateEmployeeDto, UpdateEmployeeDto, CreateSalaryDto, PaySalaryDto, GiveAdvanceDto, AdjustAdvanceDto, BulkSalaryUploadDto } from './dto';
 import { DatabaseService } from '../database/database.service';
 export declare class EmployeeService {
     private prisma;
@@ -537,5 +537,32 @@ export declare class EmployeeService {
             pendingCount: number;
         }[];
     }>;
+    private mapPaymentMode;
+    bulkSalaryUpload(dto: BulkSalaryUploadDto, userId: string): Promise<{
+        summary: {
+            totalRows: number;
+            processed: number;
+            failed: number;
+            salariesCreated: number;
+            expensesCreated: number;
+            employeesCreated: number;
+        };
+        processedRows: number;
+        createdSalaries: string[];
+        createdExpenses: string[];
+        createdEmployees: string[];
+        errors: {
+            row: number;
+            employeeName: string;
+            reason: string;
+        }[];
+        updatedAdvanceBalances: Record<string, number>;
+        success: boolean;
+        month: number;
+        year: number;
+        monthName: string;
+    }>;
+    private processOneBulkEntry;
+    private findEmployeeByIdOrName;
     private getMonthName;
 }

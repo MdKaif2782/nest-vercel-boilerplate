@@ -63,3 +63,25 @@ export declare class SalaryPaymentDto {
     paidDate: string;
     notes?: string;
 }
+export declare class BulkSalaryEntryDto {
+    employeeId?: string;
+    employeeName: string;
+    basic: number;
+    joiningDate?: string;
+    designation?: string;
+    monthlySalary: number;
+    medicalMobile?: number;
+    bonusBoksis?: number;
+    perDay?: number;
+    dailyPresent?: number;
+    totalPayable?: number;
+    advance?: number;
+    modeOfPayment?: string;
+    balance?: number;
+    signature?: any;
+}
+export declare class BulkSalaryUploadDto {
+    month: number;
+    year: number;
+    entries: BulkSalaryEntryDto[];
+}

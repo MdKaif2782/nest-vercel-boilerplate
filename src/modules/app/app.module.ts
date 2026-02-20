@@ -16,6 +16,7 @@ import { StatisticsModule } from '../statistics/statistics.module';
 import { ChallanModule } from '../challan/challan.module';
 import { PdfModule } from '../pdf/pdf.module';
 import { RetailSaleModule } from '../retail-sale/retail-sale.module';
+import { SeedModule } from '../seed/seed.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { RetailSaleModule } from '../retail-sale/retail-sale.module';
     StatisticsModule,
     ChallanModule,
     PdfModule,
-    RetailSaleModule
+    RetailSaleModule,
+    SeedModule,
     //FirebaseModule,
   ],
   controllers: [AppController],

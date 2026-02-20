@@ -10,7 +10,10 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { EmployeeService } from './employee.service';
 import {
   CreateEmployeeDto,
@@ -19,7 +22,9 @@ import {
   PaySalaryDto,
   GiveAdvanceDto,
   AdjustAdvanceDto,
+  BulkSalaryUploadDto,
 } from './dto';
+import { AccessTokenGuard } from '../auth/auth.guard';
 
 @Controller('employees')
 export class EmployeeController {
@@ -164,6 +169,33 @@ export class EmployeeController {
       return {
         statusCode: HttpStatus.CREATED,
         message: 'Monthly salaries generated successfully',
+        data: result,
+      };
+    } catch (error) {
+      return { statusCode: HttpStatus.BAD_REQUEST, message: error.message };
+    }
+  }
+
+  /**
+   * POST /employees/salaries/bulk-upload
+   * Accepts a JSON payload structured like an Excel salary sheet.
+   * Processes all rows: finds/creates employees, creates salary + expense records,
+   * handles advance give/recovery, and returns a processing summary.
+   *
+   * Requires authentication (ADMIN or MANAGER).
+   */
+  @Post('salaries/bulk-upload')
+  @UseGuards(AccessTokenGuard)
+  async bulkSalaryUpload(
+    @Body() dto: BulkSalaryUploadDto,
+    @Req() req: Request,
+  ) {
+    try {
+      const user = req as any as { user: { id: string } };
+      const result = await this.employeeService.bulkSalaryUpload(dto, user.user.id);
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Bulk salary upload processed successfully',
         data: result,
       };
     } catch (error) {
